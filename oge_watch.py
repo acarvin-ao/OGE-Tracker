@@ -234,6 +234,13 @@ def safe_name(text: str) -> str:
     return re.sub(r"[^\w.\-]+", "_", text).strip("_")
 
 
+def pdf_path(f: dict) -> Path:
+    """Where a filing's PDF is stored."""
+    original = Path(urllib.parse.unquote(f["pdf_url"].split("?")[0])).stem
+    filename = safe_name(f"{f['date']}_{f['doc_type']}_{original}")[:150] + ".pdf"
+    return DATA_DIR / "pdfs" / safe_name(f["person"]) / filename
+
+
 def download_pdf(f: dict) -> str:
     """Domino servers are picky about how spaces and "$FILE" are encoded,
     so try a few spellings of the same URL."""
@@ -244,9 +251,7 @@ def download_pdf(f: dict) -> str:
         url.replace("/$FILE/", "/%24FILE/"),
         url.replace("/PAS+Index/", "/PAS%20Index/").replace("/$FILE/", "/%24FILE/"),
     ]))
-    original = Path(urllib.parse.unquote(url.split("?")[0])).stem
-    filename = safe_name(f"{f['date']}_{f['doc_type']}_{original}")[:150] + ".pdf"
-    dest = DATA_DIR / "pdfs" / safe_name(f["person"]) / filename
+    dest = pdf_path(f)
     if dest.exists():
         return str(dest)
     for candidate in candidates:
