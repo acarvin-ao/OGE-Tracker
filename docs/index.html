@@ -129,6 +129,30 @@ h4 { margin: 22px 0 6px; font-size: 1rem; }
 .bar .bb { background: var(--buy); } .bar .ss { background: var(--sell); } .bar .xx { background: var(--muted); }
 .own-tag { font-size: 0.72rem; background: var(--mark); color: var(--mark-ink); border-radius: 3px; padding: 0 5px; margin-left: 4px; white-space: nowrap; }
 
+/* Agency view */
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.tabs button { font: inherit; font-size: 0.85rem; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); border-radius: 99px; padding: 4px 12px; cursor: pointer; }
+.tabs button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.tabs .n { color: var(--muted); margin-left: 4px; }
+.tabs button[aria-pressed="true"] .n { color: inherit; opacity: 0.75; }
+.people th, .people td { padding: 9px 12px; border-bottom: 1px solid var(--rule); text-align: left; font-size: 0.88rem; vertical-align: top; }
+.people thead th { color: var(--muted); font-weight: 600; font-size: 0.8rem; }
+.people tbody tr { cursor: pointer; }
+.people tbody tr:hover td { background: color-mix(in srgb, var(--buy) 6%, var(--surface)); }
+.people .nm { font-weight: 600; }
+.people .rl { display: block; color: var(--muted); font-size: 0.8rem; font-weight: 400; max-width: 34ch; }
+.people .none td { color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 12px 4px; align-items: baseline; }
+.chips .lbl { font-size: 0.85rem; color: var(--muted); margin-right: 4px; }
+.chip { font: inherit; font-size: 0.82rem; border: 0; border-radius: 3px; padding: 2px 8px; background: var(--mark); color: var(--mark-ink); cursor: pointer; }
+tr.grp th { text-align: left; font-size: 0.78rem; color: var(--muted); font-weight: 600; padding: 12px 8px 4px; background: var(--surface); border-bottom: 1px solid var(--rule); position: sticky; left: 0; }
+button.link { all: unset; cursor: pointer; }
+button.link:hover, button.link:focus-visible { text-decoration: underline; }
+.stats { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 6px 0 4px; font-size: 0.9rem; }
+.stats b { font-size: 1.15rem; }
+.months svg { width: 100%; height: auto; display: block; }
+.months text { fill: var(--muted); font-size: 10px; font-family: inherit; }
+
 footer { padding: 30px 0 60px; border-top: 1px solid var(--rule); margin-top: 40px; }
 @media (prefers-reduced-motion: no-preference) { dialog.drawer[open] { animation: slide 0.18s ease-out; } }
 @keyframes slide { from { transform: translateX(30px); opacity: 0.6; } }
@@ -151,6 +175,8 @@ footer { padding: 30px 0 60px; border-top: 1px solid var(--rule); margin-top: 40
     <label>Assets
       <select id="f-class"><option value="equity">Stocks and options</option><option value="">Everything</option><option value="bond">Bonds only</option><option value="fund">Funds only</option></select>
     </label>
+    <label>Agency <select id="f-agency"><option value="">All agencies</option></select></label>
+    <label>Official <select id="f-person"><option value="">All officials</option></select></label>
     <label>Sector <select id="f-sector"><option value="">All sectors</option></select></label>
     <label>Search <input type="search" id="f-q" placeholder="Company or ticker"></label>
     <label class="check"><input type="checkbox" id="f-pres" checked> Include the President</label>
@@ -163,6 +189,13 @@ footer { padding: 30px 0 60px; border-top: 1px solid var(--rule); margin-top: 40
     <h2 id="h-overlap">Companies traded by more than one official</h2>
     <p class="sub">Each cell counts that official’s purchases (▲) and sales (▼) in the selected period. Select a company to see its timeline alongside any federal actions involving it.</p>
     <div class="panel scroll" id="matrix"></div>
+  </section>
+
+  <section aria-labelledby="h-agency">
+    <h2 id="h-agency">Officials by agency</h2>
+    <p class="sub">Choose an agency to compare the people in it, or select a name to see that official’s trades in detail. Choosing an agency here also narrows the rest of the page to it.</p>
+    <div class="tabs" id="agency-tabs" role="group" aria-label="Agency"></div>
+    <div class="panel scroll" id="agency"></div>
   </section>
 
   <section aria-labelledby="h-sectors">
@@ -224,15 +257,32 @@ const keyOf = (t) => t.ticker || "~" + normOrg(t.company);
 
 let DATA = null, EVENTS = [], PEOPLE = [], FILTERED = [], page = 0, DEPTS = [], MEASURE = "count";
 const NON_COMPANY = ["Funds", "Municipal & other bonds", "Unclassified"];
+const personOf = (name) => DATA.people.find((x) => x.name === name) || { name, role: "", agency: "" };
+const agencyOf = (name) => personOf(name).agency || "Other";
+const deptCache = new Map();
+// An official's department comes from their agency in the roster; offices
+// inside it ("components", matched on the role) can add sectors or companies.
 const deptFor = (person) => {
-  const p = DATA.people.find((x) => x.name === person);
-  if (!p) return null;
-  if (/^President/.test(p.role)) return { name: "President", all: true };
-  return DEPTS.find((d) => d.match.some((m) => p.role.toLowerCase().includes(m.toLowerCase()))) || null;
+  if (deptCache.has(person)) return deptCache.get(person);
+  const p = personOf(person);
+  let out = null;
+  if (p.agency === "White House" || /^President/.test(p.role)) out = { name: "President", all: true };
+  else {
+    const d = DEPTS.find((x) => x.name === p.agency)
+      || DEPTS.find((x) => (x.match || []).some((m) => p.role.toLowerCase().includes(m.toLowerCase())));
+    if (d) {
+      const comps = (d.components || []).filter((c) => c.match && p.role.includes(c.match));
+      out = { name: d.name, why: d.why,
+        sectors: [...new Set([...(d.sectors || []), ...comps.flatMap((c) => c.sectors || [])])],
+        tickers: [...new Set([...(d.tickers || []), ...comps.flatMap((c) => c.tickers || [])])] };
+    }
+  }
+  deptCache.set(person, out);
+  return out;
 };
 const oversees = (person, sector, ticker) => {
   const d = deptFor(person);
-  return !!d && !d.all && ((d.sectors || []).includes(sector) || (ticker && (d.tickers || []).includes(ticker)));
+  return !!d && !d.all && ((d.sectors || []).includes(sector) || (!!ticker && (d.tickers || []).includes(ticker)));
 };
 const estValue = (t) => t.amount_min ? (t.amount_max ? (t.amount_min + t.amount_max) / 2 : t.amount_min) : 0;
 const PAGE_SIZE = 50;
@@ -261,9 +311,13 @@ async function load() {
   DATA.transactions.forEach((t) => { t.sector = t.sector || "Unclassified"; });
   const sectorNames = [...new Set(DATA.transactions.map((t) => t.sector))].sort();
   $("f-sector").innerHTML += sectorNames.map((n) => `<option>${esc(n)}</option>`).join("");
+  const agencies = [...new Set(DATA.people.map((p) => p.agency || "Other"))];
+  $("f-agency").innerHTML += agencies.map((a) => `<option>${esc(a)}</option>`).join("");
+  fillPersonOptions();
+  $("f-agency").addEventListener("input", () => { $("f-person").value = ""; fillPersonOptions(); });
   $("m-count").onclick = () => { MEASURE = "count"; renderSectors(); };
   $("m-value").onclick = () => { MEASURE = "value"; renderSectors(); };
-  ["f-from", "f-to", "f-type", "f-class", "f-sector", "f-q", "f-pres", "f-clean"].forEach((id) => $(id).addEventListener("input", () => { page = 0; render(); }));
+  ["f-from", "f-to", "f-type", "f-class", "f-agency", "f-person", "f-sector", "f-q", "f-pres", "f-clean"].forEach((id) => $(id).addEventListener("input", () => { page = 0; render(); }));
   $("prev").onclick = () => { page--; renderTable(); };
   $("next").onclick = () => { page++; renderTable(); };
   $("d-close").onclick = () => $("drawer").close();
@@ -271,7 +325,15 @@ async function load() {
   render();
 }
 
-function applyFilters() {
+function fillPersonOptions() {
+  const agency = $("f-agency").value, keep = $("f-person").value;
+  const list = DATA.people.filter((p) => !agency || (p.agency || "Other") === agency);
+  $("f-person").innerHTML = `<option value="">All officials</option>` + list.map((p) => `<option>${esc(p.name)}</option>`).join("");
+  if (list.some((p) => p.name === keep)) $("f-person").value = keep;
+}
+
+function applyFilters(opts = {}) {
+  const agency = opts.ignoreAgency ? "" : $("f-agency").value, person = opts.ignorePerson ? "" : $("f-person").value;
   const from = $("f-from").value, to = $("f-to").value, type = $("f-type").value, klass = $("f-class").value;
   const q = $("f-q").value.trim().toLowerCase(), pres = $("f-pres").checked, clean = $("f-clean").checked, sector = $("f-sector").value;
   const presidents = new Set(DATA.people.filter((p) => p.role === "President").map((p) => p.name));
@@ -280,6 +342,7 @@ function applyFilters() {
     (!type || t.type === type) &&
     (!klass || (klass === "equity" ? (t.class === "stock" || t.class === "option") : t.class === klass)) &&
     (pres || !presidents.has(t.person)) && (!clean || !t.review.length) && (!sector || t.sector === sector) &&
+    (!agency || agencyOf(t.person) === agency) && (!person || t.person === person) &&
     (!q || t.company.toLowerCase().includes(q) || t.asset.toLowerCase().includes(q) || t.ticker.toLowerCase() === q));
 }
 
@@ -294,7 +357,7 @@ function render() {
   const companies = new Set(FILTERED.filter((t) => t.class !== "bond").map(keyOf));
   const reports = DATA.filings.filter((f) => f.rows > 0).length;
   $("lede").innerHTML = `<strong>${FILTERED.length.toLocaleString()} transactions</strong> by <strong>${people.size} officials</strong> across ${companies.size.toLocaleString()} companies and funds, from ${reports} transaction reports. Officials disclose trades weeks after making them, so the most recent activity always lags.`;
-  renderMatrix(); renderSectors(); renderHeat(); renderFilings(); renderTable();
+  renderMatrix(); renderAgency(); renderSectors(); renderHeat(); renderFilings(); renderTable();
 }
 
 function groupByCompany(rows) {
@@ -362,15 +425,21 @@ function renderHeat() {
       ? `<td style="background: rgba(var(--heat), ${a.toFixed(2)}); color: ${a > 0.55 ? "#fff" : "inherit"}" title="${who}: ${n} in ${label(m)}">${n}</td>`
       : `<td class="zero" title="${who}: no trades in ${label(m)}">0</td>`;
   };
-  const rows = people.map((p) => `<tr><th class="p" scope="row">${esc(p.name)}</th>${months.map((m) => cellHtml(counts.get(p.name + "|" + m) || 0, max, esc(p.name), m)).join("")}</tr>`).join("");
+  let lastAgency = null;
+  const rows = people.map((p) => {
+    const grp = agencyOf(p.name) !== lastAgency ? `<tr class="grp"><th colspan="${months.length + 1}">${esc(lastAgency = agencyOf(p.name))}</th></tr>` : "";
+    return `${grp}<tr><th class="p" scope="row"><button class="link" data-person="${esc(p.name)}">${esc(p.name)}</button></th>${months.map((m) => cellHtml(counts.get(p.name + "|" + m) || 0, max, esc(p.name), m)).join("")}</tr>`;
+  }).join("");
   const totals = months.map((m) => people.reduce((a, p) => a + (counts.get(p.name + "|" + m) || 0), 0));
   const totalMax = Math.max(...totals);
   const totalRow = `<tr class="total"><th class="p" scope="row">All officials</th>${months.map((m, i) => cellHtml(totals[i], totalMax, "All officials", m)).join("")}</tr>`;
+  setTimeout(() => $("heat").querySelectorAll("button[data-person]").forEach((b) => b.addEventListener("click", () => openPerson(b.dataset.person))));
   $("heat").innerHTML = `<table class="heat"><thead><tr><th></th>${months.map((m) => `<th>${label(m)}</th>`).join("")}</tr></thead><tbody>${rows}${totalRow}</tbody></table>`;
 }
 
 function renderFilings() {
-  const list = [...DATA.filings].filter((f) => f.is_278t).sort((a, b) => b.posted.localeCompare(a.posted)).slice(0, 8);
+  const agency = $("f-agency").value, person = $("f-person").value;
+  const list = [...DATA.filings].filter((f) => f.is_278t && (!agency || agencyOf(f.person) === agency) && (!person || f.person === person)).sort((a, b) => b.posted.localeCompare(a.posted)).slice(0, 8);
   $("filings").innerHTML = list.map((f) => `<li><strong>${esc(f.person)}</strong>, ${f.rows ? `${f.rows} transactions` : esc(f.status)}<br><span class="when">Posted ${fmtDate(f.posted)}${f.url ? ` · <a href="${esc(f.url)}" target="_blank" rel="noopener">${f.needs_request ? "request from OGE" : "original PDF"}</a>` : ""}</span></li>`).join("") || `<li>No transaction reports yet.</li>`;
 }
 
@@ -380,7 +449,7 @@ function txRows(rows, showPerson = true) {
     const f = filings.get(t.filing);
     const cls = t.type === "buy" ? "b" : t.type === "sell" ? "s" : "x";
     const flag = t.review.length ? `<span class="flag" title="${esc(t.review.join("; "))}">check</span>` : "";
-    return `<tr><td>${fmtDate(t.date)}</td>${showPerson ? `<td>${esc(t.person)}</td>` : ""}<td class="${cls}">${t.type === "buy" ? "Buy" : t.type === "sell" ? "Sell" : t.type === "exchange" ? "Exchange" : "Unclear"}</td><td>${esc(t.company)}${t.ticker ? `<span class="ticker">${esc(t.ticker)}</span>` : ""}${t.company !== t.asset ? `<div class="ticker">${esc(t.asset)}</div>` : ""}<div class="ticker">${esc(t.sector)}${oversees(t.person, t.sector, t.ticker) ? `<span class="own-tag">their department’s sector</span>` : ""}</div></td><td class="amt">${range(t)}</td><td>${f && f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener">p. ${t.page}</a>` : ""}${flag}</td></tr>`;
+    return `<tr><td>${fmtDate(t.date)}</td>${showPerson ? `<td>${esc(t.person)}</td>` : ""}<td class="${cls}">${t.type === "buy" ? "Buy" : t.type === "sell" ? "Sell" : t.type === "exchange" ? "Exchange" : "Unclear"}</td><td>${esc(t.company)}${t.ticker ? `<span class="ticker">${esc(t.ticker)}</span>` : ""}${t.company !== t.asset ? `<div class="ticker">${esc(t.asset)}</div>` : ""}<div class="ticker">${esc(t.sector)}${oversees(t.person, t.sector, t.ticker) ? `<span class="own-tag">their agency’s sector</span>` : ""}</div></td><td class="amt">${range(t)}</td><td>${f && f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener">p. ${t.page}</a>` : ""}${flag}</td></tr>`;
   }).join("");
 }
 
@@ -396,6 +465,136 @@ function renderTable() {
   $("prev").disabled = page === 0; $("next").disabled = page >= pages - 1;
 }
 
+function summarize(rows) {
+  const buys = rows.filter((t) => t.type === "buy").length, sells = rows.filter((t) => t.type === "sell").length;
+  const value = rows.reduce((a, t) => a + estValue(t), 0);
+  const count = (key) => { const m = new Map(); rows.forEach((t) => { const k = key(t); m.set(k, (m.get(k) || 0) + 1); }); return [...m.entries()].sort((a, b) => b[1] - a[1]); };
+  return { n: rows.length, buys, sells, value, sectors: count((t) => t.sector),
+    companies: count((t) => t.ticker || t.company), own: rows.filter((t) => oversees(t.person, t.sector, t.ticker)) };
+}
+
+function ownShare(name, rows, own) {
+  const d = deptFor(name);
+  if (d && d.all) return `<span class="note">oversees every sector</span>`;
+  if (!d || !((d.sectors || []).length + (d.tickers || []).length)) return `<span class="note">no sectors set</span>`;
+  if (!rows.length) return "";
+  return own.length ? `${own.length} (${Math.round(100 * own.length / rows.length)}%)` : "none";
+}
+
+function renderAgency() {
+  const agency = $("f-agency").value;
+  const all = applyFilters({ ignoreAgency: true, ignorePerson: true });
+  const agencies = [...new Set(DATA.people.map((p) => p.agency || "Other"))];
+  $("agency-tabs").innerHTML = [["", "All agencies", DATA.people.length], ...agencies.map((a) => [a, a, DATA.people.filter((p) => (p.agency || "Other") === a).length])]
+    .map(([v, label, n]) => `<button type="button" data-agency="${esc(v)}" aria-pressed="${v === agency}">${esc(label)}<span class="n">${n}</span></button>`).join("");
+  $("agency-tabs").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+    $("f-agency").value = b.dataset.agency; $("f-person").value = ""; fillPersonOptions(); page = 0; render();
+  }));
+  const latest = (name) => DATA.filings.filter((f) => f.person === name && f.is_278t).sort((a, b) => b.posted.localeCompare(a.posted))[0];
+  const clip = (x) => x.length > 30 ? x.slice(0, 29) + "…" : x;
+  const top = (list, k = 3) => list.slice(0, k).map(([name, n]) => `${esc(clip(name))} <span class="ticker">${n}</span>`).join(", ");
+
+  if (!agency) {
+    const rows = agencies.map((a) => {
+      const mine = all.filter((t) => agencyOf(t.person) === a), s = summarize(mine);
+      const people = DATA.people.filter((p) => (p.agency || "Other") === a);
+      const active = new Set(mine.map((t) => t.person)).size;
+      const head = `<td><span class="nm">${esc(a)}</span><span class="rl">${active} of ${people.length} officials with trades</span></td>`;
+      if (!s.n) return `<tr class="none" data-agency="${esc(a)}">${head}<td colspan="5">No trades</td></tr>`;
+      const dep = DEPTS.find((x) => x.name === a);
+      const flags = dep && ((dep.sectors || []).length + (dep.tickers || []).length + (dep.components || []).length);
+      const own = a === "White House" ? `<span class="note">oversees every sector</span>` : !flags ? `<span class="note">no sectors set</span>` : `${s.own.length} (${Math.round(100 * s.own.length / s.n)}%)`;
+      return `<tr data-agency="${esc(a)}">${head}<td>${s.n.toLocaleString()}</td><td><span class="b">▲${s.buys}</span> <span class="s">▼${s.sells}</span></td><td>${money(Math.round(s.value))}</td><td>${own}</td><td>${top(s.companies)}</td></tr>`;
+    }).join("");
+    $("agency").innerHTML = `<table class="people"><thead><tr><th>Agency</th><th>Trades</th><th>Direction</th><th>Est. value</th><th>In own agency’s sectors</th><th>Most-traded</th></tr></thead><tbody>${rows}</tbody></table>`;
+    $("agency").querySelectorAll("tr[data-agency]").forEach((tr) => tr.addEventListener("click", () => {
+      $("f-agency").value = tr.dataset.agency; fillPersonOptions(); page = 0; render();
+      $("h-agency").scrollIntoView({ block: "start" });
+    }));
+    return;
+  }
+
+  const inAgency = all.filter((t) => agencyOf(t.person) === agency);
+  const shared = groupByCompany(inAgency.filter((t) => t.class !== "bond" && t.class !== "fund"))
+    .filter((g) => g.people.size >= 2).sort((a, b) => b.people.size - a.people.size || b.rows.length - a.rows.length).slice(0, 12);
+  const chips = shared.length
+    ? `<div class="chips"><span class="lbl">Traded by two or more officials here:</span>${shared.map((g, i) => `<button class="chip" data-i="${i}" title="${esc([...g.people.keys()].join(", "))}">${esc(g.ticker || g.company)} · ${g.people.size}</button>`).join("")}</div>`
+    : "";
+  const people = DATA.people.filter((p) => (p.agency || "Other") === agency);
+  const rows = people.map((p) => {
+    const mine = inAgency.filter((t) => t.person === p.name), s = summarize(mine), f = latest(p.name);
+    const anyFiling = DATA.filings.some((x) => x.person === p.name);
+    const status = f ? fmtDate(f.posted) : anyFiling ? "No transaction reports" : "No reports found in OGE’s collection";
+    if (!s.n) return `<tr class="none" data-person="${esc(p.name)}"><td><span class="nm">${esc(p.name)}</span><span class="rl">${esc(p.role)}</span></td><td colspan="5">No trades${$("f-from").value || $("f-to").value || $("f-sector").value || $("f-q").value ? " matching the filters" : ""}</td><td>${status}</td></tr>`;
+    return `<tr data-person="${esc(p.name)}"><td><span class="nm">${esc(p.name)}</span><span class="rl">${esc(p.role)}</span></td><td>${s.n.toLocaleString()}</td><td><span class="b">▲${s.buys}</span> <span class="s">▼${s.sells}</span></td><td>${money(Math.round(s.value))}</td><td>${top(s.sectors)}</td><td>${ownShare(p.name, mine, s.own)}</td><td>${status}</td></tr>`;
+  }).join("");
+  $("agency").innerHTML = `${chips}<table class="people"><thead><tr><th>Official</th><th>Trades</th><th>Direction</th><th>Est. value</th><th>Top sectors</th><th>In their agency’s sectors</th><th>Latest report</th></tr></thead><tbody>${rows}</tbody></table>`;
+  $("agency").querySelectorAll("tr[data-person]").forEach((tr) => tr.addEventListener("click", () => openPerson(tr.dataset.person)));
+  $("agency").querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => openCompany(shared[+b.dataset.i])));
+}
+
+function monthsChart(rows) {
+  const dated = rows.filter((t) => t.date).map((t) => t.date.slice(0, 7)).sort();
+  if (!dated.length) return "";
+  const months = [];
+  for (let [y, m] = dated[0].split("-").map(Number); `${y}-${String(m).padStart(2, "0")}` <= dated[dated.length - 1]; m === 12 ? (y++, m = 1) : m++) months.push(`${y}-${String(m).padStart(2, "0")}`);
+  const by = (m, type) => rows.filter((t) => t.date && t.date.startsWith(m) && (type ? t.type === type : !["buy", "sell"].includes(t.type))).length;
+  const W = 700, H = 150, L = 30, B = 22, bw = Math.min(40, (W - L) / months.length);
+  const max = Math.max(1, ...months.map((m) => by(m, "buy") + by(m, "sell") + by(m)));
+  let bars = "";
+  months.forEach((m, i) => {
+    let y = H - B;
+    [["buy", "var(--buy)"], ["sell", "var(--sell)"], [null, "var(--muted)"]].forEach(([type, color]) => {
+      const n = by(m, type), h = (H - B - 10) * n / max;
+      if (n) { y -= h; bars += `<rect x="${(L + i * bw + 1).toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(1, bw - 2).toFixed(1)}" height="${h.toFixed(1)}" fill="${color}"><title>${m}: ${n} ${type || "other"}</title></rect>`; }
+    });
+    if (months.length <= 14 || i % Math.ceil(months.length / 12) === 0)
+      bars += `<text x="${(L + i * bw + bw / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle">${new Date(m + "-15T12:00:00").toLocaleDateString("en-US", { month: "short", year: "2-digit" })}</text>`;
+  });
+  bars += `<text x="0" y="16">${max}</text><line x1="${L}" x2="${W}" y1="${H - B}" y2="${H - B}" stroke="var(--rule)"/>`;
+  return `<div class="months"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Trades per month">${bars}</svg></div>`;
+}
+
+function openPerson(name) {
+  const p = personOf(name);
+  const scope = applyFilters({ ignoreAgency: true, ignorePerson: true });
+  const rows = scope.filter((t) => t.person === name);
+  const s = summarize(rows), d = deptFor(name);
+  const filings = DATA.filings.filter((f) => f.person === name).sort((a, b) => b.posted.localeCompare(a.posted));
+  const maxSec = Math.max(1, ...s.sectors.map(([, n]) => n));
+  const secBars = s.sectors.map(([sec, n]) => {
+    const list = rows.filter((t) => t.sector === sec), b = list.filter((t) => t.type === "buy").length, se = list.filter((t) => t.type === "sell").length;
+    const w = (x) => (100 * x / maxSec).toFixed(1) + "%";
+    return `<li data-sector="${esc(sec)}" style="cursor:pointer"><span>${esc(sec)}${oversees(name, sec) ? `<span class="own-tag">their agency’s sector</span>` : ""}</span><span class="bar"><span class="bb" style="width:${w(b)}"></span><span class="ss" style="width:${w(se)}"></span><span class="xx" style="width:${w(n - b - se)}"></span></span><span>${n}</span></li>`;
+  }).join("");
+  const companies = groupByCompany(rows).sort((a, b) => b.rows.length - a.rows.length).slice(0, 25);
+  const compRows = companies.map((g, i) => {
+    const b = g.rows.filter((t) => t.type === "buy").length, se = g.rows.filter((t) => t.type === "sell").length;
+    const others = new Set(scope.filter((t) => keyOf(t) === g.key && t.person !== name).map((t) => t.person));
+    return `<tr data-i="${i}" style="cursor:pointer"><td>${esc(g.company)}${g.ticker ? `<span class="ticker">${esc(g.ticker)}</span>` : ""}${oversees(name, g.rows[0].sector, g.ticker) ? `<span class="own-tag">their agency’s sector</span>` : ""}</td><td class="b">▲${b}</td><td class="s">▼${se}</td><td>${money(Math.round(g.rows.reduce((a, t) => a + estValue(t), 0)))}</td><td>${others.size ? [...others].map(shortName).map(esc).join(", ") : `<span class="note">no one else</span>`}</td></tr>`;
+  }).join("");
+  $("d-title").textContent = name;
+  $("d-sub").textContent = `${p.role}${p.agency && p.agency !== "White House" ? `, ${p.agency}` : ""}`;
+  $("drawer").scrollTop = 0;
+  $("d-body").innerHTML = rows.length ? `
+    <div class="stats"><span><b>${s.n.toLocaleString()}</b> trades</span><span class="b"><b>▲${s.buys}</b> buys</span><span class="s"><b>▼${s.sells}</b> sells</span><span><b>${money(Math.round(s.value))}</b> estimated value</span><span><b>${filings.filter((f) => f.is_278t).length}</b> transaction report${filings.filter((f) => f.is_278t).length === 1 ? "" : "s"}</span></div>
+    ${d && !d.all && d.why ? `<p class="note">${esc(d.name)}: ${esc(d.why)}</p>` : ""}
+    <h4>Trades per month</h4>${monthsChart(rows)}<div class="legend"><span class="b">■ buys</span><span class="s">■ sells</span></div>
+    <h4>By sector</h4><ul class="bars">${secBars}</ul>
+    <h4>Companies</h4><p class="note">“Also traded by” lists other officials with trades in the same company under the current filters.</p>
+    <div class="scroll"><table class="tx"><thead><tr><th>Company</th><th>Buys</th><th>Sells</th><th>Est. value</th><th>Also traded by</th></tr></thead><tbody>${compRows}</tbody></table></div>
+    <h4>Transactions</h4><div class="scroll"><table class="tx"><thead><tr><th>Traded</th><th>Official</th><th>Direction</th><th>Asset</th><th>Amount</th><th>Source</th></tr></thead><tbody>${txRows([...rows].sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 300))}</tbody></table></div>
+    ${rows.length > 300 ? `<p class="note">Showing the newest 300. Choose this official in the Official filter to page through them all.</p>` : ""}`
+    : `<p class="note">${filings.length ? "No trades match the current filters." : "OGE’s collection has no reports for this official yet. Acting officials and recent nominees often aren’t in it; their reports can be requested from their agency with OGE Form 201."}</p>`;
+  $("d-body").innerHTML += filings.length ? `<h4>Reports on file</h4><ul class="evlist">${filings.map((f) => `<li>${fmtDate(f.posted)}: ${esc(f.doc_type)}${f.rows ? `, ${f.rows} transactions` : ""}${f.url ? ` <a href="${esc(f.url)}" target="_blank" rel="noopener">${f.needs_request ? "request" : "PDF"}</a>` : ""}</li>`).join("")}</ul>` : "";
+  $("d-body").querySelectorAll("li[data-sector]").forEach((li) => li.addEventListener("click", () => openSector(li.dataset.sector, name)));
+  $("d-body").querySelectorAll("tr[data-i]").forEach((tr) => tr.addEventListener("click", () => {
+    const key = companies[+tr.dataset.i].key;
+    openCompany(groupByCompany(scope.filter((t) => keyOf(t) === key))[0]);
+  }));
+  if (!$("drawer").open) $("drawer").showModal();
+}
+
 function renderSectors() {
   $("m-count").setAttribute("aria-pressed", MEASURE === "count");
   $("m-value").setAttribute("aria-pressed", MEASURE === "value");
@@ -407,12 +606,14 @@ function renderSectors() {
   rows.forEach((t) => { if (!bySector.has(t.sector)) bySector.set(t.sector, []); bySector.get(t.sector).push(t); });
   const sectors = [...bySector.keys()].sort((a, b) =>
     (NON_COMPANY.includes(a) - NON_COMPANY.includes(b)) || val(bySector.get(b)) - val(bySector.get(a)));
-  const people = PEOPLE.filter((p) => rows.some((t) => t.person === p.name));
+  const people = DATA.people.filter((p) => rows.some((t) => t.person === p.name));
   const cell = new Map();
   rows.forEach((t) => { const k = t.person + "|" + t.sector; if (!cell.has(k)) cell.set(k, []); cell.get(k).push(t); });
   // Shade within each official's row, so small traders' patterns stay visible next to large ones.
-  const head = `<thead><tr><th class="who">Official</th>${sectors.map((sec, i) => `<th class="sec"><button data-sector="${i}">${esc(sec)}</button></th>`).join("")}<th class="sharehead">In their department’s sectors</th></tr></thead>`;
+  const head = `<thead><tr><th class="who">Official</th>${sectors.map((sec, i) => `<th class="sec"><button data-sector="${i}">${esc(sec)}</button></th>`).join("")}<th class="sharehead">In their agency’s sectors</th></tr></thead>`;
+  let lastAgency = null;
   const body = people.map((p) => {
+    const grp = agencyOf(p.name) !== lastAgency ? `<tr class="grp"><th colspan="${sectors.length + 2}">${esc(lastAgency = agencyOf(p.name))}</th></tr>` : "";
     const mine = rows.filter((t) => t.person === p.name);
     const total = val(mine);
     const rowMax = Math.max(...sectors.map((sec) => val(cell.get(p.name + "|" + sec) || [])));
@@ -423,14 +624,15 @@ function renderSectors() {
       const v = val(list);
       const a = v ? 0.1 + 0.9 * (v / rowMax) : 0;
       const isOwn = d && !d.all && (d.sectors || []).includes(sec);
-      return `<td class="v${isOwn ? " own" : ""}" data-p="${esc(p.name)}" data-s="${i}" style="background: rgba(var(--heat), ${a.toFixed(2)}); color: ${a > 0.55 ? "#fff" : "inherit"}" title="${esc(`${p.name}, ${sec}: ${show(v)}${isOwn ? " (their department’s sector)" : ""}`)}">${v ? show(v) : ""}</td>`;
+      return `<td class="v${isOwn ? " own" : ""}" data-p="${esc(p.name)}" data-s="${i}" style="background: rgba(var(--heat), ${a.toFixed(2)}); color: ${a > 0.55 ? "#fff" : "inherit"}" title="${esc(`${p.name}, ${sec}: ${show(v)}${isOwn ? " (their agency’s sector)" : ""}`)}">${v ? show(v) : ""}</td>`;
     }).join("");
     const share = d && d.all ? `<span class="note">oversees every sector</span>`
       : d && (d.sectors || []).length + (d.tickers || []).length ? (own.length ? `${show(val(own))} (${Math.round(100 * val(own) / total)}%)` : "none")
       : `<span class="note">no sectors set</span>`;
-    return `<tr><th class="who" scope="row">${esc(p.name)}<span class="dept">${esc(d ? (d.all ? "President" : d.name) : p.role)}</span></th>${tds}<td class="share">${share}</td></tr>`;
+    return `${grp}<tr><th class="who" scope="row"><button class="link" data-person="${esc(p.name)}">${esc(p.name)}</button><span class="dept">${esc(p.role)}</span></th>${tds}<td class="share">${share}</td></tr>`;
   }).join("");
   $("sectors").innerHTML = `<table class="sectors">${head}<tbody>${body}</tbody></table>`;
+  $("sectors").querySelectorAll("button[data-person]").forEach((b) => b.addEventListener("click", () => openPerson(b.dataset.person)));
   $("sectors").querySelectorAll("button[data-sector]").forEach((b) => b.addEventListener("click", () => openSector(sectors[+b.dataset.sector])));
   $("sectors").querySelectorAll("td.v").forEach((td) => td.addEventListener("click", () => {
     const sec = sectors[+td.dataset.s];
@@ -446,7 +648,7 @@ function openSector(sector, onlyPerson) {
   const max = Math.max(...ranked.map(([, c]) => c.buy + c.sell + c.other));
   const bars = ranked.map(([name, c]) => {
     const n = c.buy + c.sell + c.other, w = (x) => (100 * x / max).toFixed(1) + "%";
-    return `<li><span>${esc(name)}${oversees(name, sector) ? `<span class="own-tag">their department’s sector</span>` : ""}</span><span class="bar" aria-label="${c.buy} buys, ${c.sell} sells"><span class="bb" style="width:${w(c.buy)}"></span><span class="ss" style="width:${w(c.sell)}"></span><span class="xx" style="width:${w(c.other)}"></span></span><span><span class="b">▲${c.buy}</span> <span class="s">▼${c.sell}</span></span></li>`;
+    return `<li><span>${esc(name)}${oversees(name, sector) ? `<span class="own-tag">their agency’s sector</span>` : ""}</span><span class="bar" aria-label="${c.buy} buys, ${c.sell} sells"><span class="bb" style="width:${w(c.buy)}"></span><span class="ss" style="width:${w(c.sell)}"></span><span class="xx" style="width:${w(c.other)}"></span></span><span><span class="b">▲${c.buy}</span> <span class="s">▼${c.sell}</span></span></li>`;
   }).join("");
   const companies = groupByCompany(rows).sort((a, b) => b.people.size - a.people.size || b.rows.length - a.rows.length).slice(0, 25);
   const compRows = companies.map((g, i) => {
