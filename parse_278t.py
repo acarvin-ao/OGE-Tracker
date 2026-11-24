@@ -681,12 +681,25 @@ def main() -> int:
         if stale.name not in used_cache:
             stale.unlink()
 
-    people = []
-    seen = set()
-    for f in filings:
+    # The roster in oge_watch.py is the source of truth for each official's
+    # current role and agency, in the order listed there.
+    import oge_watch
+    roster = {p["label"]: p for p in oge_watch.PEOPLE}
+    order = {p["label"]: i for i, p in enumerate(oge_watch.PEOPLE)}
+    people, seen = [], set()
+    # Everyone on the roster appears, even with no filings yet, so the page
+    # can say so; then anyone found in filings who has since been removed.
+    for p in oge_watch.PEOPLE:
+        seen.add(p["label"])
+        people.append({"name": p["label"], "role": p["role"], "agency": p.get("agency", "")})
+    for f in sorted(filings, key=lambda f: order.get(f["person"], 10_000)):
         if f["person"] not in seen:
             seen.add(f["person"])
-            people.append({"name": f["person"], "role": f["role"]})
+            r = roster.get(f["person"], {})
+            people.append({"name": f["person"], "role": r.get("role", f["role"]),
+                           "agency": r.get("agency", f.get("group", ""))})
+    for e in out_filings:
+        e["agency"] = roster.get(e["person"], {}).get("agency", "")
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUT_PATH.write_text(json.dumps({

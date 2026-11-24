@@ -65,33 +65,93 @@ from pathlib import Path
 # OGE lists names as "Last, First Middle". "search" is sent to OGE's name
 # column filter (a substring match), and "first" is a regex applied to the
 # part after the comma, to weed out other people who share the last name.
+# "agency" groups officials on the web page.
 #
-# Roster as of November 2026: the President plus the heads of the 15
-# executive departments, including the four who have left. Edit freely.
+# Only Senate-confirmed officials (and nominees) are listed, because those
+# are the reports OGE posts. Acting officials who aren't confirmed to any
+# post usually file with their own agency instead, available by Form 201
+# request. Roster as of November 2026. Entries marked "unverified" were not
+# re-checked against a recent source; if a name is wrong the watcher simply
+# finds no filings for it.
+def P(label, role, agency, search, first):
+    return {"label": label, "role": role, "agency": agency, "search": search, "first": first}
+
+
 PEOPLE = [
-    {"label": "Donald J. Trump", "role": "President", "search": "Trump", "first": r"^Donald"},
-    # Current department heads
-    {"label": "Marco Rubio", "role": "Secretary of State", "search": "Rubio", "first": r"^Marco"},
-    {"label": "Scott Bessent", "role": "Secretary of the Treasury", "search": "Bessent", "first": r"^(Scott|William)"},
-    {"label": "Pete Hegseth", "role": "Secretary of Defense / War", "search": "Hegseth", "first": r"^Pete"},
-    {"label": "Todd Blanche", "role": "Attorney General (from Aug 2026)", "search": "Blanche", "first": r"^Todd"},
-    {"label": "Doug Burgum", "role": "Secretary of the Interior", "search": "Burgum", "first": r"^Doug"},
-    {"label": "Brooke Rollins", "role": "Secretary of Agriculture", "search": "Rollins", "first": r"^Brooke"},
-    {"label": "Howard Lutnick", "role": "Secretary of Commerce", "search": "Lutnick", "first": r"^Howard"},
-    {"label": "Keith Sonderling", "role": "Secretary of Labor (from Oct 2026)", "search": "Sonderling", "first": r"^Keith"},
-    {"label": "Robert F. Kennedy Jr.", "role": "Secretary of Health and Human Services", "search": "Kennedy", "first": r"^Robert"},
-    {"label": "Scott Turner", "role": "Secretary of Housing and Urban Development", "search": "Turner", "first": r"^(Eric|Scott)"},
-    {"label": "Sean Duffy", "role": "Secretary of Transportation", "search": "Duffy", "first": r"^Sean"},
-    {"label": "Chris Wright", "role": "Secretary of Energy", "search": "Wright", "first": r"^Chris"},
-    {"label": "Linda McMahon", "role": "Secretary of Education", "search": "McMahon", "first": r"^Linda"},
-    {"label": "Doug Collins", "role": "Secretary of Veterans Affairs", "search": "Collins", "first": r"^Doug"},
-    {"label": "Markwayne Mullin", "role": "Secretary of Homeland Security", "search": "Mullin", "first": r"^Markwayne"},
-    # Former department heads (second term)
-    {"label": "Kristi Noem", "role": "Former Secretary of Homeland Security", "search": "Noem", "first": r"^Kristi"},
-    {"label": "Pam Bondi", "role": "Former Attorney General", "search": "Bondi", "first": r"^Pam"},
-    {"label": "Lori Chavez-DeRemer", "role": "Former Secretary of Labor", "search": "DeRemer", "first": r"^Lori"},
-    # Add anyone else the same way, e.g.:
-    # {"label": "JD Vance", "role": "Vice President", "search": "Vance", "first": r"^(James|JD)"},
+    P("Donald J. Trump", "President", "White House", "Trump", r"^Donald"),
+
+    # ---- Cabinet secretaries (current) ----
+    P("Marco Rubio", "Secretary of State", "State", "Rubio", r"^Marco"),
+    P("Scott Bessent", "Secretary of the Treasury", "Treasury", "Bessent", r"^(Scott|William)"),
+    P("Pete Hegseth", "Secretary of Defense / War", "Defense", "Hegseth", r"^Pete"),
+    P("Todd Blanche", "Attorney General (from Aug 2026); earlier Deputy Attorney General", "Justice", "Blanche", r"^Todd"),
+    P("Doug Burgum", "Secretary of the Interior", "Interior", "Burgum", r"^Doug"),
+    P("Brooke Rollins", "Secretary of Agriculture", "Agriculture", "Rollins", r"^Brooke"),
+    P("Howard Lutnick", "Secretary of Commerce", "Commerce", "Lutnick", r"^Howard"),
+    P("Keith Sonderling", "Secretary of Labor (from Oct 2026); earlier Deputy Secretary", "Labor", "Sonderling", r"^Keith"),
+    P("Robert F. Kennedy Jr.", "Secretary of Health and Human Services", "Health and Human Services", "Kennedy", r"^Robert"),
+    P("Scott Turner", "Secretary of Housing and Urban Development", "Housing and Urban Development", "Turner", r"^(Eric|Scott)"),
+    P("Sean Duffy", "Secretary of Transportation", "Transportation", "Duffy", r"^Sean"),
+    P("Chris Wright", "Secretary of Energy", "Energy", "Wright", r"^Chris"),
+    P("Linda McMahon", "Secretary of Education", "Education", "McMahon", r"^Linda"),
+    P("Doug Collins", "Secretary of Veterans Affairs", "Veterans Affairs", "Collins", r"^Doug"),
+    P("Markwayne Mullin", "Secretary of Homeland Security", "Homeland Security", "Mullin", r"^Markwayne"),
+    # ---- Cabinet secretaries (former, second term) ----
+    P("Kristi Noem", "Former Secretary of Homeland Security", "Homeland Security", "Noem", r"^Kristi"),
+    P("Pam Bondi", "Former Attorney General", "Justice", "Bondi", r"^Pam"),
+    P("Lori Chavez-DeRemer", "Former Secretary of Labor", "Labor", "DeRemer", r"^Lori"),
+
+    # ---- Defense ----
+    P("Steve Feinberg", "Deputy Secretary of Defense / War", "Defense", "Feinberg", r"^Steph|^Steve"),
+    P("Elbridge Colby", "Under Secretary for Policy", "Defense", "Colby", r"^Elbridge"),
+    P("Michael Duffey", "Under Secretary for Acquisition and Sustainment", "Defense", "Duffey", r"^Michael"),
+    P("Emil Michael", "Under Secretary for Research and Engineering", "Defense", "Michael", r"^Emil"),
+    P("Anthony Tata", "Under Secretary for Personnel and Readiness", "Defense", "Tata", r"^Anthony"),
+    P("Bradley Hansell", "Under Secretary for Intelligence and Security", "Defense", "Hansell", r"^Brad"),
+    P("Jules Hurst", "Under Secretary (Comptroller) / CFO", "Defense", "Hurst", r"^Jules"),
+
+    # ---- Justice ----
+    P("Stanley Woodward", "Associate Attorney General", "Justice", "Woodward", r"^Stanley"),
+    P("D. John Sauer", "Solicitor General (unverified)", "Justice", "Sauer", r"^(Dean|D\.? ?John|John)"),
+    P("Kash Patel", "Director, FBI", "Justice", "Patel", r"^Kash"),
+    P("Robert Cekada", "Director, ATF", "Justice", "Cekada", r"^Robert"),
+    P("Terrance Cole", "Administrator, DEA (unverified)", "Justice", "Cole", r"^Terr"),
+    P("John Eisenberg", "Assistant Attorney General, National Security Division (unverified)", "Justice", "Eisenberg", r"^John"),
+    P("Adam Candeub", "Nominee, Assistant Attorney General for Antitrust", "Justice", "Candeub", r"^Adam"),
+    P("Gail Slater", "Former Assistant Attorney General for Antitrust", "Justice", "Slater", r"^(Abigail|Gail)"),
+
+    # ---- Treasury ----
+    P("Francis Brooke", "Deputy Secretary of the Treasury", "Treasury", "Brooke", r"^Francis"),
+    P("Erin Browne", "Under Secretary for International Affairs", "Treasury", "Browne", r"^Erin"),
+    P("Jonathan McKernan", "Under Secretary for Domestic Finance", "Treasury", "McKernan", r"^Jonathan"),
+    P("John Hurley", "Under Secretary for Terrorism and Financial Intelligence", "Treasury", "Hurley", r"^John"),
+
+    # ---- Energy ----
+    P("James Danly", "Deputy Secretary of Energy", "Energy", "Danly", r"^James"),
+    P("Kyle Haustveit", "Under Secretary of Energy", "Energy", "Haustveit", r"^Kyle"),
+    P("Dario Gil", "Under Secretary for Science", "Energy", "Gil", r"^Dar"),
+    P("Brandon Williams", "Under Secretary for Nuclear Security / NNSA Administrator (unverified)", "Energy", "Williams", r"^Brandon"),
+
+    # ---- Commerce ----
+    P("Paul Dabbar", "Deputy Secretary of Commerce", "Commerce", "Dabbar", r"^Paul"),
+    P("Jeffrey Kessler", "Under Secretary for Industry and Security (export controls)", "Commerce", "Kessler", r"^Jeff"),
+    P("William Kimmitt", "Under Secretary for International Trade (unverified)", "Commerce", "Kimmitt", r"^William"),
+    P("Neil Jacobs", "Under Secretary for Oceans and Atmosphere / NOAA (unverified)", "Commerce", "Jacobs", r"^Neil"),
+    P("John Squires", "Under Secretary for Intellectual Property / USPTO (unverified)", "Commerce", "Squires", r"^John"),
+
+    # ---- Homeland Security ----
+    P("Troy Edgar", "Deputy Secretary of Homeland Security", "Homeland Security", "Edgar", r"^Troy"),
+    P("Pedro Allende", "Under Secretary for Science and Technology", "Homeland Security", "Allende", r"^Pedro"),
+    P("Matthew Kozma", "Under Secretary for Intelligence and Analysis", "Homeland Security", "Kozma", r"^Matt"),
+    P("Rodney Scott", "Commissioner, Customs and Border Protection", "Homeland Security", "Scott", r"^Rodney"),
+    P("Joseph Edlow", "Director, Citizenship and Immigration Services", "Homeland Security", "Edlow", r"^Joseph"),
+    P("Cameron Hamilton", "Administrator, FEMA", "Homeland Security", "Hamilton", r"^Cameron"),
+
+    # ---- Office of Management and Budget ----
+    P("Russell Vought", "Director, OMB", "OMB", "Vought", r"^Russ"),
+    P("Hal Duncan", "Deputy Director, OMB", "OMB", "Duncan", r"^(Harold|Hal)"),
+    P("Eric Ueland", "Deputy Director for Management, OMB", "OMB", "Ueland", r"^Eric"),
+    P("Dan Bishop", "Former Deputy Director, OMB", "OMB", "Bishop", r"^(James|Dan)"),
 ]
 
 # Ignore filings dated before this (keeps first-term and pre-nomination
@@ -222,6 +282,7 @@ def fetch_person(api_url: str, person: dict, debug: bool = False) -> list[dict]:
             continue
         f["person"] = person["label"]
         f["role"] = person["role"]
+        f["group"] = person.get("agency", "")   # roster grouping; "agency" is OGE's own field
         results.append(f)
     return results
 
@@ -277,8 +338,27 @@ def notify(url: str, message: str) -> None:
         print(f"  (notification failed: {err})")
 
 
-CSV_FIELDS = ["first_seen", "person", "role", "date", "doc_type", "is_278t",
+CSV_FIELDS = ["first_seen", "person", "role", "group", "date", "doc_type", "is_278t",
               "name", "position", "agency", "pdf_url", "request_url", "local_pdf"]
+
+
+def migrate_csv(csv_path: Path) -> None:
+    """Older versions wrote filings.csv without some columns. Rewrite it with
+    the current columns so new rows line up, filling in what we can."""
+    if not csv_path.exists():
+        return
+    with csv_path.open(newline="", encoding="utf-8") as fh:
+        reader = csv.DictReader(fh)
+        if reader.fieldnames == CSV_FIELDS:
+            return
+        rows = list(reader)
+    groups = {p["label"]: p.get("agency", "") for p in PEOPLE}
+    for r in rows:
+        r["group"] = r.get("group") or groups.get(r.get("person", ""), "")
+    with csv_path.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=CSV_FIELDS, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 def run_once(args) -> int:
@@ -308,6 +388,7 @@ def run_once(args) -> int:
 
     new_filings.sort(key=lambda f: f["date"])
     csv_path = DATA_DIR / "filings.csv"
+    migrate_csv(csv_path)
     write_header = not csv_path.exists()
     now = datetime.now().isoformat(timespec="seconds")
     with csv_path.open("a", newline="", encoding="utf-8") as fh:
