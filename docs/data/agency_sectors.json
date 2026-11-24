@@ -1,35 +1,246 @@
 {
-  "about": "Which sectors each department regulates, funds, or buys from. Used by the web page to outline trades in sectors an official's own department oversees. This is a judgment call, not an official list: edit it freely. 'match' is text found in the official's role. 'tickers' flags specific companies outside those sectors (for example a major contractor).",
+  "about": "Which sectors each department regulates, funds or buys from, used by the web page to outline trades in sectors an official's own agency oversees. Officials are matched to a department by the 'agency' set for them in oge_watch.py (the department's 'name' here). 'components' add sectors or specific companies for officials whose role contains the 'match' text, for offices whose reach is narrower or sharper than their department's. This is a judgment call, not an official list: edit it freely.",
   "departments": [
-    { "name": "State", "match": ["Secretary of State"], "sectors": ["Aerospace & defense"], "tickers": [],
-      "why": "Licenses arms exports and approves foreign military sales." },
-    { "name": "Treasury", "match": ["Treasury"], "sectors": ["Banks & lending", "Investment & insurance"], "tickers": [],
-      "why": "Oversees banking regulators, sanctions, and financial markets policy." },
-    { "name": "Defense", "match": ["Defense", "Secretary of War"], "sectors": ["Aerospace & defense"], "tickers": [],
-      "why": "The largest buyer of weapons, aircraft and defense technology." },
-    { "name": "Justice", "match": ["Attorney General"], "sectors": [], "tickers": [],
-      "why": "Antitrust and criminal enforcement reach every sector; add tickers for companies with specific DOJ matters." },
-    { "name": "Interior", "match": ["Interior"], "sectors": ["Oil & gas", "Mining & metals", "Utilities & power"], "tickers": [],
-      "why": "Leases federal land and offshore waters for drilling, mining and power projects." },
-    { "name": "Agriculture", "match": ["Agriculture"], "sectors": ["Food, agriculture & tobacco"], "tickers": [],
-      "why": "Regulates and subsidizes farming, meat and food production." },
-    { "name": "Commerce", "match": ["Commerce"], "sectors": ["Semiconductors & electronics", "Telecom & media"], "tickers": [],
-      "why": "Runs export controls, CHIPS Act funding and spectrum policy." },
-    { "name": "Labor", "match": ["Labor"], "sectors": [], "tickers": [],
-      "why": "Workplace rules apply economy-wide; add tickers for companies with specific Labor Department matters." },
-    { "name": "Health and Human Services", "match": ["Health and Human Services"], "sectors": ["Pharma & biotech", "Medical devices", "Health care services & insurance", "Food, agriculture & tobacco"], "tickers": [],
-      "why": "FDA approvals, Medicare and Medicaid payments, and food and tobacco regulation." },
-    { "name": "Housing and Urban Development", "match": ["Housing"], "sectors": ["Real estate & homebuilding", "Banks & lending"], "tickers": [],
-      "why": "FHA mortgage insurance, housing finance and public housing." },
-    { "name": "Transportation", "match": ["Transportation"], "sectors": ["Transportation & logistics", "Autos & vehicles", "Aerospace & defense"], "tickers": [],
-      "why": "Regulates airlines, railroads, trucking and vehicle safety, and certifies aircraft." },
-    { "name": "Energy", "match": ["Energy"], "sectors": ["Utilities & power", "Oil & gas", "Mining & metals"], "tickers": [],
-      "why": "Energy policy, LNG export approvals, nuclear and grid programs." },
-    { "name": "Education", "match": ["Education"], "sectors": ["Education"], "tickers": [],
-      "why": "Student aid and oversight of for-profit schools." },
-    { "name": "Veterans Affairs", "match": ["Veterans"], "sectors": ["Health care services & insurance", "Pharma & biotech", "Medical devices"], "tickers": [],
-      "why": "Runs the largest US health system and buys drugs and devices at scale." },
-    { "name": "Homeland Security", "match": ["Homeland Security"], "sectors": ["Aerospace & defense", "Transportation & logistics"], "tickers": [],
-      "why": "Border, aviation and cybersecurity contracts; airport and port security." }
+    {
+      "name": "State",
+      "sectors": [
+        "Aerospace & defense"
+      ],
+      "tickers": [],
+      "why": "Licenses arms exports and approves foreign military sales.",
+      "components": []
+    },
+    {
+      "name": "Treasury",
+      "sectors": [
+        "Banks & lending",
+        "Investment & insurance"
+      ],
+      "tickers": [],
+      "why": "Oversees banking regulators, sanctions, and financial markets policy.",
+      "components": []
+    },
+    {
+      "name": "Defense",
+      "sectors": [
+        "Aerospace & defense"
+      ],
+      "tickers": [],
+      "why": "The largest buyer of weapons, aircraft and defense technology.",
+      "components": []
+    },
+    {
+      "name": "Justice",
+      "sectors": [],
+      "tickers": [],
+      "why": "Antitrust and criminal enforcement reach every sector; add tickers for companies with specific DOJ matters.",
+      "components": [
+        {
+          "match": "Antitrust",
+          "sectors": [],
+          "tickers": [
+            "GOOGL",
+            "GOOG",
+            "AAPL",
+            "LYV",
+            "V"
+          ],
+          "why": "Companies in the Antitrust Division's major active cases (Google, Apple, Live Nation, Visa)."
+        },
+        {
+          "match": "ATF",
+          "sectors": [],
+          "tickers": [
+            "SWBI",
+            "RGR"
+          ],
+          "why": "ATF regulates firearm and ammunition makers."
+        },
+        {
+          "match": "DEA",
+          "sectors": [
+            "Pharma & biotech"
+          ],
+          "tickers": [],
+          "why": "DEA sets production quotas for opioids, stimulants and other controlled drugs."
+        },
+        {
+          "match": "National Security Division",
+          "sectors": [
+            "Aerospace & defense",
+            "Semiconductors & electronics"
+          ],
+          "tickers": [],
+          "why": "Sits on CFIUS, which reviews foreign investment in U.S. companies, and prosecutes export-control cases."
+        }
+      ]
+    },
+    {
+      "name": "Interior",
+      "sectors": [
+        "Oil & gas",
+        "Mining & metals",
+        "Utilities & power"
+      ],
+      "tickers": [],
+      "why": "Leases federal land and offshore waters for drilling, mining and power projects.",
+      "components": []
+    },
+    {
+      "name": "Agriculture",
+      "sectors": [
+        "Food, agriculture & tobacco"
+      ],
+      "tickers": [],
+      "why": "Regulates and subsidizes farming, meat and food production.",
+      "components": []
+    },
+    {
+      "name": "Commerce",
+      "sectors": [
+        "Semiconductors & electronics",
+        "Telecom & media"
+      ],
+      "tickers": [],
+      "why": "Runs export controls, CHIPS Act funding and spectrum policy.",
+      "components": [
+        {
+          "match": "International Trade",
+          "sectors": [
+            "Mining & metals",
+            "Retail & consumer"
+          ],
+          "tickers": [],
+          "why": "Runs antidumping and countervailing duty cases, which hit steel, aluminum and many imports."
+        }
+      ]
+    },
+    {
+      "name": "Labor",
+      "sectors": [],
+      "tickers": [],
+      "why": "Workplace rules apply economy-wide; add tickers for companies with specific Labor Department matters.",
+      "components": []
+    },
+    {
+      "name": "Health and Human Services",
+      "sectors": [
+        "Pharma & biotech",
+        "Medical devices",
+        "Health care services & insurance",
+        "Food, agriculture & tobacco"
+      ],
+      "tickers": [],
+      "why": "FDA approvals, Medicare and Medicaid payments, and food and tobacco regulation.",
+      "components": []
+    },
+    {
+      "name": "Housing and Urban Development",
+      "sectors": [
+        "Real estate & homebuilding",
+        "Banks & lending"
+      ],
+      "tickers": [],
+      "why": "FHA mortgage insurance, housing finance and public housing.",
+      "components": []
+    },
+    {
+      "name": "Transportation",
+      "sectors": [
+        "Transportation & logistics",
+        "Autos & vehicles",
+        "Aerospace & defense"
+      ],
+      "tickers": [],
+      "why": "Regulates airlines, railroads, trucking and vehicle safety, and certifies aircraft.",
+      "components": []
+    },
+    {
+      "name": "Energy",
+      "sectors": [
+        "Utilities & power",
+        "Oil & gas",
+        "Mining & metals"
+      ],
+      "tickers": [],
+      "why": "Energy policy, LNG export approvals, nuclear and grid programs.",
+      "components": [
+        {
+          "match": "Nuclear Security",
+          "sectors": [
+            "Aerospace & defense"
+          ],
+          "tickers": [
+            "BWXT"
+          ],
+          "why": "NNSA runs the nuclear weapons complex and its contractors."
+        }
+      ]
+    },
+    {
+      "name": "Education",
+      "sectors": [
+        "Education"
+      ],
+      "tickers": [],
+      "why": "Student aid and oversight of for-profit schools.",
+      "components": []
+    },
+    {
+      "name": "Veterans Affairs",
+      "sectors": [
+        "Health care services & insurance",
+        "Pharma & biotech",
+        "Medical devices"
+      ],
+      "tickers": [],
+      "why": "Runs the largest US health system and buys drugs and devices at scale.",
+      "components": []
+    },
+    {
+      "name": "Homeland Security",
+      "sectors": [
+        "Aerospace & defense",
+        "Transportation & logistics"
+      ],
+      "tickers": [],
+      "why": "Border, aviation and cybersecurity contracts; airport and port security.",
+      "components": [
+        {
+          "match": "Customs and Border Protection",
+          "sectors": [
+            "Retail & consumer",
+            "Autos & vehicles"
+          ],
+          "tickers": [],
+          "why": "Collects tariffs and enforces trade rules for importers."
+        },
+        {
+          "match": "FEMA",
+          "sectors": [
+            "Investment & insurance",
+            "Industrials & construction"
+          ],
+          "tickers": [],
+          "why": "Disaster aid, flood insurance and rebuilding contracts."
+        },
+        {
+          "match": "Immigration and Customs Enforcement",
+          "sectors": [],
+          "tickers": [
+            "GEO",
+            "CXW"
+          ],
+          "why": "Detention contracts with private prison operators."
+        }
+      ]
+    },
+    {
+      "name": "OMB",
+      "sectors": [],
+      "tickers": [],
+      "components": [],
+      "why": "Sets the federal budget and reviews all major regulations, so its reach is government-wide; add tickers for specific matters."
+    }
   ]
 }
