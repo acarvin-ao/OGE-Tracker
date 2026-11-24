@@ -3291,6 +3291,10 @@
 "sic": "2911",
 "sic_desc": "Petroleum Refining"
 },
+"PTA": {
+"sic": "",
+"sic_desc": ""
+},
 "PTC": {
 "sic": "7372",
 "sic_desc": "Services-Prepackaged Software"
