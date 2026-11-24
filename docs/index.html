@@ -72,8 +72,10 @@ table { border-collapse: collapse; width: 100%; }
 .grid2 { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 20px; }
 @media (max-width: 860px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
 .heat td, .heat th { padding: 5px 6px; font-size: 0.8rem; text-align: center; border-bottom: 1px solid var(--rule); }
-.heat th.p { text-align: left; white-space: nowrap; font-weight: 500; }
+.heat th.p { text-align: left; white-space: nowrap; font-weight: 500; position: sticky; left: 0; background: var(--surface); z-index: 1; }
 .heat td { min-width: 34px; border-radius: 3px; }
+.heat td.zero { color: var(--rule); }
+.heat tr.total th, .heat tr.total td { border-top: 2px solid var(--muted); font-weight: 600; }
 .filings { list-style: none; margin: 0; padding: 4px 16px; }
 .filings li { padding: 10px 0; border-bottom: 1px solid var(--rule); font-size: 0.9rem; }
 .filings li:last-child { border-bottom: 0; }
@@ -105,6 +107,28 @@ h4 { margin: 22px 0 6px; font-size: 1rem; }
 .evlist li { padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 0.9rem; }
 .cat { font-size: 0.75rem; color: var(--event); border: 1px solid currentColor; border-radius: 99px; padding: 0 7px; margin-right: 6px; }
 
+/* Sector grid */
+.sectors th, .sectors td { padding: 6px 8px; border-bottom: 1px solid var(--rule); text-align: center; font-size: 0.82rem; white-space: nowrap; }
+.sectors thead th { color: var(--muted); font-weight: 600; vertical-align: bottom; background: var(--surface); }
+.sectors thead th.sec { writing-mode: vertical-rl; transform: rotate(180deg); text-align: left; height: 215px; padding: 8px 4px; }
+.sectors thead th.sec button { all: unset; cursor: pointer; }
+.sectors thead th.sec button:hover, .sectors thead th.sec button:focus-visible { color: var(--ink); text-decoration: underline; }
+.sectors .who { text-align: left; position: sticky; left: 0; background: var(--surface); min-width: 190px; }
+.sectors .dept { display: block; color: var(--muted); font-size: 0.75rem; font-weight: 400; }
+.sectors td.v { cursor: pointer; min-width: 38px; border-radius: 3px; }
+.sectors td.own { box-shadow: inset 0 0 0 2.5px var(--mark-ink), inset 0 0 0 5px var(--mark); }
+.sectors td.share { font-weight: 600; }
+.sectors thead th.sharehead { white-space: normal; min-width: 120px; text-align: left; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: var(--radius-s); overflow: hidden; margin-bottom: 10px; }
+.seg button { font: inherit; font-size: 0.85rem; border: 0; background: var(--surface); color: var(--muted); padding: 4px 12px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.key { display: inline-block; width: 14px; height: 14px; vertical-align: -2px; margin-right: 4px; border-radius: 3px; box-shadow: inset 0 0 0 2.5px var(--mark-ink), inset 0 0 0 5px var(--mark); }
+.bars { list-style: none; padding: 0; margin: 0; }
+.bars li { display: grid; grid-template-columns: minmax(140px, 260px) 1fr auto; gap: 10px; align-items: center; padding: 5px 0; font-size: 0.88rem; }
+.bar { display: flex; height: 14px; border-radius: 3px; overflow: hidden; background: color-mix(in srgb, var(--rule) 50%, transparent); }
+.bar .bb { background: var(--buy); } .bar .ss { background: var(--sell); } .bar .xx { background: var(--muted); }
+.own-tag { font-size: 0.72rem; background: var(--mark); color: var(--mark-ink); border-radius: 3px; padding: 0 5px; margin-left: 4px; white-space: nowrap; }
+
 footer { padding: 30px 0 60px; border-top: 1px solid var(--rule); margin-top: 40px; }
 @media (prefers-reduced-motion: no-preference) { dialog.drawer[open] { animation: slide 0.18s ease-out; } }
 @keyframes slide { from { transform: translateX(30px); opacity: 0.6; } }
@@ -127,6 +151,7 @@ footer { padding: 30px 0 60px; border-top: 1px solid var(--rule); margin-top: 40
     <label>Assets
       <select id="f-class"><option value="equity">Stocks and options</option><option value="">Everything</option><option value="bond">Bonds only</option><option value="fund">Funds only</option></select>
     </label>
+    <label>Sector <select id="f-sector"><option value="">All sectors</option></select></label>
     <label>Search <input type="search" id="f-q" placeholder="Company or ticker"></label>
     <label class="check"><input type="checkbox" id="f-pres" checked> Include the President</label>
     <label class="check"><input type="checkbox" id="f-clean"> Hide rows that need review</label>
@@ -140,10 +165,20 @@ footer { padding: 30px 0 60px; border-top: 1px solid var(--rule); margin-top: 40
     <div class="panel scroll" id="matrix"></div>
   </section>
 
+  <section aria-labelledby="h-sectors">
+    <h2 id="h-sectors">Trades by sector</h2>
+    <p class="sub"><span class="key" aria-hidden="true"></span>Outlined cells are sectors the official’s own department regulates, funds or buys from. Select a sector name to see everyone trading in it, or a cell to see that official’s trades.</p>
+    <div class="seg" role="group" aria-label="Measure">
+      <button type="button" id="m-count" aria-pressed="true">Number of trades</button><button type="button" id="m-value" aria-pressed="false">Estimated value</button>
+    </div>
+    <div class="panel scroll" id="sectors"></div>
+    <p class="note">Sectors come from each company’s SEC industry code. Which sectors a department oversees is set in data/agency_sectors.json and is a judgment call, not an official list. Estimated value uses the midpoint of each reported range.</p>
+  </section>
+
   <section class="grid2">
     <div>
       <h2>Trades by month</h2>
-      <p class="sub">Number of transactions in each month, by trade date.</p>
+      <p class="sub">Number of transactions in each month, by trade date. Every month in the range is shown, including months with no trades.</p>
       <div class="panel scroll" id="heat"></div>
     </div>
     <div>
@@ -180,14 +215,26 @@ footer { padding: 30px 0 60px; border-top: 1px solid var(--rule); margin-top: 40
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const money = (n) => n >= 1e6 ? "$" + (n / 1e6).toFixed(n % 1e6 ? 1 : 0) + "M" : n >= 1e3 ? "$" + Math.round(n / 1e3) + "K" : "$" + n;
-const range = (t) => t.amount_max ? `${money(t.amount_min - 1)}–${money(t.amount_max)}` : `over ${money(t.amount_min - 1)}`;
+const range = (t) => !t.amount_min ? "unreadable" : t.amount_max ? `${money(t.amount_min - 1)}–${money(t.amount_max)}` : `over ${money(t.amount_min - 1)}`;
 const fmtDate = (d) => d ? new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "unknown date";
 const shortName = (n) => { const parts = n.replace(/,? (Jr|Sr|III|II)\.?$/, "").split(" "); return parts[parts.length - 1]; };
 const normOrg = (s) => String(s || "").toUpperCase().replace(/\(.*?\)/g, " ").replace(/[^A-Z0-9 ]/g, " ")
   .split(/\s+/).filter((w) => w && !["INC", "CORP", "CORPORATION", "CO", "COMPANY", "LTD", "PLC", "LLC", "THE", "HOLDINGS", "GROUP", "CLASS", "CL", "A", "B", "COMMON", "STOCK"].includes(w)).join(" ");
 const keyOf = (t) => t.ticker || "~" + normOrg(t.company);
 
-let DATA = null, EVENTS = [], PEOPLE = [], FILTERED = [], page = 0;
+let DATA = null, EVENTS = [], PEOPLE = [], FILTERED = [], page = 0, DEPTS = [], MEASURE = "count";
+const NON_COMPANY = ["Funds", "Municipal & other bonds", "Unclassified"];
+const deptFor = (person) => {
+  const p = DATA.people.find((x) => x.name === person);
+  if (!p) return null;
+  if (/^President/.test(p.role)) return { name: "President", all: true };
+  return DEPTS.find((d) => d.match.some((m) => p.role.toLowerCase().includes(m.toLowerCase()))) || null;
+};
+const oversees = (person, sector, ticker) => {
+  const d = deptFor(person);
+  return !!d && !d.all && ((d.sectors || []).includes(sector) || (ticker && (d.tickers || []).includes(ticker)));
+};
+const estValue = (t) => t.amount_min ? (t.amount_max ? (t.amount_min + t.amount_max) / 2 : t.amount_min) : 0;
 const PAGE_SIZE = 50;
 
 async function load() {
@@ -202,12 +249,21 @@ async function load() {
     return;
   }
   try {
+    const ag = await fetch("data/agency_sectors.json", { cache: "no-cache" });
+    if (ag.ok) DEPTS = (await ag.json()).departments || [];
+  } catch { /* the department map is optional */ }
+  try {
     const ev = await fetch("data/events.json", { cache: "no-cache" });
     if (ev.ok) EVENTS = ((await ev.json()).events || []).filter((e) => e.date);
   } catch { /* events are optional */ }
   PEOPLE = DATA.people.filter((p) => DATA.transactions.some((t) => t.person === p.name));
   $("generated").textContent = `Data updated ${new Date(DATA.generated).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}.`;
-  ["f-from", "f-to", "f-type", "f-class", "f-q", "f-pres", "f-clean"].forEach((id) => $(id).addEventListener("input", () => { page = 0; render(); }));
+  DATA.transactions.forEach((t) => { t.sector = t.sector || "Unclassified"; });
+  const sectorNames = [...new Set(DATA.transactions.map((t) => t.sector))].sort();
+  $("f-sector").innerHTML += sectorNames.map((n) => `<option>${esc(n)}</option>`).join("");
+  $("m-count").onclick = () => { MEASURE = "count"; renderSectors(); };
+  $("m-value").onclick = () => { MEASURE = "value"; renderSectors(); };
+  ["f-from", "f-to", "f-type", "f-class", "f-sector", "f-q", "f-pres", "f-clean"].forEach((id) => $(id).addEventListener("input", () => { page = 0; render(); }));
   $("prev").onclick = () => { page--; renderTable(); };
   $("next").onclick = () => { page++; renderTable(); };
   $("d-close").onclick = () => $("drawer").close();
@@ -217,13 +273,13 @@ async function load() {
 
 function applyFilters() {
   const from = $("f-from").value, to = $("f-to").value, type = $("f-type").value, klass = $("f-class").value;
-  const q = $("f-q").value.trim().toLowerCase(), pres = $("f-pres").checked, clean = $("f-clean").checked;
+  const q = $("f-q").value.trim().toLowerCase(), pres = $("f-pres").checked, clean = $("f-clean").checked, sector = $("f-sector").value;
   const presidents = new Set(DATA.people.filter((p) => p.role === "President").map((p) => p.name));
   return DATA.transactions.filter((t) =>
     (!from || (t.date && t.date >= from)) && (!to || (t.date && t.date <= to)) &&
     (!type || t.type === type) &&
     (!klass || (klass === "equity" ? (t.class === "stock" || t.class === "option") : t.class === klass)) &&
-    (pres || !presidents.has(t.person)) && (!clean || !t.review.length) &&
+    (pres || !presidents.has(t.person)) && (!clean || !t.review.length) && (!sector || t.sector === sector) &&
     (!q || t.company.toLowerCase().includes(q) || t.asset.toLowerCase().includes(q) || t.ticker.toLowerCase() === q));
 }
 
@@ -238,7 +294,7 @@ function render() {
   const companies = new Set(FILTERED.filter((t) => t.class !== "bond").map(keyOf));
   const reports = DATA.filings.filter((f) => f.rows > 0).length;
   $("lede").innerHTML = `<strong>${FILTERED.length.toLocaleString()} transactions</strong> by <strong>${people.size} officials</strong> across ${companies.size.toLocaleString()} companies and funds, from ${reports} transaction reports. Officials disclose trades weeks after making them, so the most recent activity always lags.`;
-  renderMatrix(); renderHeat(); renderFilings(); renderTable();
+  renderMatrix(); renderSectors(); renderHeat(); renderFilings(); renderTable();
 }
 
 function groupByCompany(rows) {
@@ -286,20 +342,31 @@ function renderMatrix() {
 }
 
 function renderHeat() {
-  const dated = FILTERED.filter((t) => t.date);
+  const today = new Date().toISOString().slice(0, 10);
+  const dated = FILTERED.filter((t) => t.date && t.date >= "2000-01-01" && t.date <= today);
   if (!dated.length) { $("heat").innerHTML = `<p class="message">No dated transactions match these filters.</p>`; return; }
-  const months = [...new Set(dated.map((t) => t.date.slice(0, 7)))].sort();
+  // Every month from the first trade to the last, including months with no trades.
+  const seen = dated.map((t) => t.date.slice(0, 7)).sort();
+  const months = [];
+  for (let [y, m] = seen[0].split("-").map(Number); `${y}-${String(m).padStart(2, "0")}` <= seen[seen.length - 1]; m === 12 ? (y++, m = 1) : m++) {
+    months.push(`${y}-${String(m).padStart(2, "0")}`);
+  }
   const counts = new Map();
   dated.forEach((t) => { const k = t.person + "|" + t.date.slice(0, 7); counts.set(k, (counts.get(k) || 0) + 1); });
   const max = Math.max(...counts.values());
   const people = PEOPLE.filter((p) => dated.some((t) => t.person === p.name));
-  const label = (m) => new Date(m + "-15").toLocaleDateString("en-US", { month: "short", year: "2-digit" });
-  const rows = people.map((p) => `<tr><th class="p" scope="row">${esc(p.name)}</th>${months.map((m) => {
-    const n = counts.get(p.name + "|" + m) || 0;
-    const a = n ? 0.12 + 0.88 * Math.log(1 + n) / Math.log(1 + max) : 0;
-    return `<td style="background: rgba(var(--heat), ${a.toFixed(2)}); color: ${a > 0.55 ? "#fff" : "inherit"}" title="${n} in ${label(m)}">${n || ""}</td>`;
-  }).join("")}</tr>`).join("");
-  $("heat").innerHTML = `<table class="heat"><thead><tr><th></th>${months.map((m) => `<th>${label(m)}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table>`;
+  const label = (m) => new Date(m + "-15T12:00:00").toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+  const cellHtml = (n, scaleMax, who, m) => {
+    const a = n ? 0.12 + 0.88 * Math.log(1 + n) / Math.log(1 + scaleMax) : 0;
+    return n
+      ? `<td style="background: rgba(var(--heat), ${a.toFixed(2)}); color: ${a > 0.55 ? "#fff" : "inherit"}" title="${who}: ${n} in ${label(m)}">${n}</td>`
+      : `<td class="zero" title="${who}: no trades in ${label(m)}">0</td>`;
+  };
+  const rows = people.map((p) => `<tr><th class="p" scope="row">${esc(p.name)}</th>${months.map((m) => cellHtml(counts.get(p.name + "|" + m) || 0, max, esc(p.name), m)).join("")}</tr>`).join("");
+  const totals = months.map((m) => people.reduce((a, p) => a + (counts.get(p.name + "|" + m) || 0), 0));
+  const totalMax = Math.max(...totals);
+  const totalRow = `<tr class="total"><th class="p" scope="row">All officials</th>${months.map((m, i) => cellHtml(totals[i], totalMax, "All officials", m)).join("")}</tr>`;
+  $("heat").innerHTML = `<table class="heat"><thead><tr><th></th>${months.map((m) => `<th>${label(m)}</th>`).join("")}</tr></thead><tbody>${rows}${totalRow}</tbody></table>`;
 }
 
 function renderFilings() {
@@ -313,7 +380,7 @@ function txRows(rows, showPerson = true) {
     const f = filings.get(t.filing);
     const cls = t.type === "buy" ? "b" : t.type === "sell" ? "s" : "x";
     const flag = t.review.length ? `<span class="flag" title="${esc(t.review.join("; "))}">check</span>` : "";
-    return `<tr><td>${fmtDate(t.date)}</td>${showPerson ? `<td>${esc(t.person)}</td>` : ""}<td class="${cls}">${t.type === "buy" ? "Buy" : t.type === "sell" ? "Sell" : t.type === "exchange" ? "Exchange" : "Unclear"}</td><td>${esc(t.company)}${t.ticker ? `<span class="ticker">${esc(t.ticker)}</span>` : ""}${t.company !== t.asset ? `<div class="ticker">${esc(t.asset)}</div>` : ""}</td><td class="amt">${range(t)}</td><td>${f && f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener">p. ${t.page}</a>` : ""}${flag}</td></tr>`;
+    return `<tr><td>${fmtDate(t.date)}</td>${showPerson ? `<td>${esc(t.person)}</td>` : ""}<td class="${cls}">${t.type === "buy" ? "Buy" : t.type === "sell" ? "Sell" : t.type === "exchange" ? "Exchange" : "Unclear"}</td><td>${esc(t.company)}${t.ticker ? `<span class="ticker">${esc(t.ticker)}</span>` : ""}${t.company !== t.asset ? `<div class="ticker">${esc(t.asset)}</div>` : ""}<div class="ticker">${esc(t.sector)}${oversees(t.person, t.sector, t.ticker) ? `<span class="own-tag">their department’s sector</span>` : ""}</div></td><td class="amt">${range(t)}</td><td>${f && f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener">p. ${t.page}</a>` : ""}${flag}</td></tr>`;
   }).join("");
 }
 
@@ -327,6 +394,74 @@ function renderTable() {
     : `<p class="message">Nothing matches these filters.</p>`;
   $("page-info").textContent = `Page ${page + 1} of ${pages}`;
   $("prev").disabled = page === 0; $("next").disabled = page >= pages - 1;
+}
+
+function renderSectors() {
+  $("m-count").setAttribute("aria-pressed", MEASURE === "count");
+  $("m-value").setAttribute("aria-pressed", MEASURE === "value");
+  const rows = FILTERED;
+  if (!rows.length) { $("sectors").innerHTML = `<p class="message">No transactions match these filters.</p>`; return; }
+  const val = (list) => MEASURE === "count" ? list.length : list.reduce((a, t) => a + estValue(t), 0);
+  const show = (v) => MEASURE === "count" ? v.toLocaleString() : money(Math.round(v));
+  const bySector = new Map();
+  rows.forEach((t) => { if (!bySector.has(t.sector)) bySector.set(t.sector, []); bySector.get(t.sector).push(t); });
+  const sectors = [...bySector.keys()].sort((a, b) =>
+    (NON_COMPANY.includes(a) - NON_COMPANY.includes(b)) || val(bySector.get(b)) - val(bySector.get(a)));
+  const people = PEOPLE.filter((p) => rows.some((t) => t.person === p.name));
+  const cell = new Map();
+  rows.forEach((t) => { const k = t.person + "|" + t.sector; if (!cell.has(k)) cell.set(k, []); cell.get(k).push(t); });
+  // Shade within each official's row, so small traders' patterns stay visible next to large ones.
+  const head = `<thead><tr><th class="who">Official</th>${sectors.map((sec, i) => `<th class="sec"><button data-sector="${i}">${esc(sec)}</button></th>`).join("")}<th class="sharehead">In their department’s sectors</th></tr></thead>`;
+  const body = people.map((p) => {
+    const mine = rows.filter((t) => t.person === p.name);
+    const total = val(mine);
+    const rowMax = Math.max(...sectors.map((sec) => val(cell.get(p.name + "|" + sec) || [])));
+    const own = mine.filter((t) => oversees(p.name, t.sector, t.ticker));
+    const d = deptFor(p.name);
+    const tds = sectors.map((sec, i) => {
+      const list = cell.get(p.name + "|" + sec) || [];
+      const v = val(list);
+      const a = v ? 0.1 + 0.9 * (v / rowMax) : 0;
+      const isOwn = d && !d.all && (d.sectors || []).includes(sec);
+      return `<td class="v${isOwn ? " own" : ""}" data-p="${esc(p.name)}" data-s="${i}" style="background: rgba(var(--heat), ${a.toFixed(2)}); color: ${a > 0.55 ? "#fff" : "inherit"}" title="${esc(`${p.name}, ${sec}: ${show(v)}${isOwn ? " (their department’s sector)" : ""}`)}">${v ? show(v) : ""}</td>`;
+    }).join("");
+    const share = d && d.all ? `<span class="note">oversees every sector</span>`
+      : d && (d.sectors || []).length + (d.tickers || []).length ? (own.length ? `${show(val(own))} (${Math.round(100 * val(own) / total)}%)` : "none")
+      : `<span class="note">no sectors set</span>`;
+    return `<tr><th class="who" scope="row">${esc(p.name)}<span class="dept">${esc(d ? (d.all ? "President" : d.name) : p.role)}</span></th>${tds}<td class="share">${share}</td></tr>`;
+  }).join("");
+  $("sectors").innerHTML = `<table class="sectors">${head}<tbody>${body}</tbody></table>`;
+  $("sectors").querySelectorAll("button[data-sector]").forEach((b) => b.addEventListener("click", () => openSector(sectors[+b.dataset.sector])));
+  $("sectors").querySelectorAll("td.v").forEach((td) => td.addEventListener("click", () => {
+    const sec = sectors[+td.dataset.s];
+    if ((cell.get(td.dataset.p + "|" + sec) || []).length) openSector(sec, td.dataset.p);
+  }));
+}
+
+function openSector(sector, onlyPerson) {
+  const rows = FILTERED.filter((t) => t.sector === sector && (!onlyPerson || t.person === onlyPerson));
+  const people = new Map();
+  rows.forEach((t) => { const c = people.get(t.person) || { buy: 0, sell: 0, other: 0 }; c[t.type === "buy" ? "buy" : t.type === "sell" ? "sell" : "other"]++; people.set(t.person, c); });
+  const ranked = [...people.entries()].sort((a, b) => (b[1].buy + b[1].sell + b[1].other) - (a[1].buy + a[1].sell + a[1].other));
+  const max = Math.max(...ranked.map(([, c]) => c.buy + c.sell + c.other));
+  const bars = ranked.map(([name, c]) => {
+    const n = c.buy + c.sell + c.other, w = (x) => (100 * x / max).toFixed(1) + "%";
+    return `<li><span>${esc(name)}${oversees(name, sector) ? `<span class="own-tag">their department’s sector</span>` : ""}</span><span class="bar" aria-label="${c.buy} buys, ${c.sell} sells"><span class="bb" style="width:${w(c.buy)}"></span><span class="ss" style="width:${w(c.sell)}"></span><span class="xx" style="width:${w(c.other)}"></span></span><span><span class="b">▲${c.buy}</span> <span class="s">▼${c.sell}</span></span></li>`;
+  }).join("");
+  const companies = groupByCompany(rows).sort((a, b) => b.people.size - a.people.size || b.rows.length - a.rows.length).slice(0, 25);
+  const compRows = companies.map((g, i) => {
+    const buys = g.rows.filter((t) => t.type === "buy").length, sells = g.rows.filter((t) => t.type === "sell").length;
+    return `<tr data-i="${i}" style="cursor:pointer"><td>${esc(g.company)}${g.ticker ? `<span class="ticker">${esc(g.ticker)}</span>` : ""}</td><td>${g.people.size}</td><td class="b">▲${buys}</td><td class="s">▼${sells}</td><td>${[...g.people.keys()].map(shortName).map(esc).join(", ")}</td></tr>`;
+  }).join("");
+  $("d-title").textContent = onlyPerson ? `${onlyPerson}: ${sector}` : sector;
+  $("d-sub").textContent = `${rows.length} transactions${onlyPerson ? "" : ` by ${people.size} officials`} in the current filters`;
+  $("d-body").innerHTML = `${onlyPerson ? "" : `<h4>Who’s trading</h4><ul class="bars">${bars}</ul><div class="legend"><span class="b">■ buys</span><span class="s">■ sells</span></div>`}
+    <h4>Companies</h4><div class="scroll"><table class="tx"><thead><tr><th>Company</th><th>Officials</th><th>Buys</th><th>Sells</th><th>Who</th></tr></thead><tbody>${compRows}</tbody></table></div>
+    <h4>Transactions</h4><div class="scroll"><table class="tx"><thead><tr><th>Traded</th><th>Official</th><th>Direction</th><th>Asset</th><th>Amount</th><th>Source</th></tr></thead><tbody>${txRows([...rows].sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 300))}</tbody></table></div>
+    ${rows.length > 300 ? `<p class="note">Showing the newest 300. Use the Sector filter at the top of the page to see them all in the main table.</p>` : ""}`;
+  $("d-body").querySelectorAll("tr[data-i]").forEach((tr) => tr.addEventListener("click", () => openCompany(companies[+tr.dataset.i])));
+  if (!$("drawer").open) $("drawer").showModal();
+  $("drawer").scrollTop = 0;
 }
 
 function openCompany(g) {
@@ -358,8 +493,9 @@ function openCompany(g) {
   const evHtml = events.length
     ? `<h4>Federal actions</h4><ul class="evlist">${events.map((e) => `<li><span class="cat">${esc(e.category || "action")}</span>${fmtDate(e.date)}: ${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.title)}</a>` : esc(e.title)}${e.source ? ` <span class="ticker">${esc(e.source)}</span>` : ""}</li>`).join("")}</ul>`
     : `<h4>Federal actions</h4><p class="note">None recorded yet. Contracts, investigations and regulatory actions added to data/events.json will appear here and on the timeline above.</p>`;
+  $("drawer").scrollTop = 0;
   $("d-body").innerHTML = `${svg}<h4>Transactions</h4><div class="scroll"><table class="tx"><thead><tr><th>Traded</th><th>Official</th><th>Direction</th><th>Asset</th><th>Amount</th><th>Source</th></tr></thead><tbody>${txRows([...g.rows].sort((a, b) => (b.date || "").localeCompare(a.date || "")))}</tbody></table></div>${evHtml}`;
-  $("drawer").showModal();
+  if (!$("drawer").open) $("drawer").showModal();
 }
 
 load();
