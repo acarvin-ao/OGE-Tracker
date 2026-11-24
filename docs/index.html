@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shared positions: trades by Trump and his cabinet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #eef1f4; --surface: #ffffff; --ink: #16202e; --muted: #5b6675; --rule: #cfd5dd;
+  --buy: #1f5fad; --sell: #c4561d; --exch: #6b5ca5; --mark: #f5e05a; --mark-ink: #16202e;
+  --event: #2c7a4b; --heat: 31, 95, 173;
+  --radius-s: 4px; --radius-l: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #11161d; --surface: #19212b; --ink: #e6eaf0; --muted: #98a3b1; --rule: #2d3743;
+    --buy: #79aef2; --sell: #f2925a; --exch: #b3a6f0; --mark: #6b5f17; --mark-ink: #fff6c2;
+    --event: #6fcf97; --heat: 121, 174, 242;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); }
+body { font: 15px/1.5 "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif; font-variant-numeric: tabular-nums; }
+a { color: var(--buy); }
+:focus-visible { outline: 3px solid var(--buy); outline-offset: 2px; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 20px; }
+
+header.top { padding: 40px 0 24px; }
+h1 { font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.05; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 12px; max-width: 18ch; }
+.lede { color: var(--muted); max-width: 70ch; margin: 0; }
+.lede strong { color: var(--ink); font-weight: 600; }
+
+.filters { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--rule); padding: 10px 0; }
+.filters .wrap { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: end; }
+.filters label { display: flex; flex-direction: column; font-size: 0.8rem; color: var(--muted); gap: 3px; }
+.filters input, .filters select { font: inherit; font-size: 0.9rem; color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius-s); padding: 5px 8px; }
+@media (max-width: 700px) { .filters { position: static; } }
+.filters .check { flex-direction: row; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--ink); padding-bottom: 6px; }
+
+section { margin: 36px 0; }
+h2 { font-size: 1.35rem; margin: 0 0 4px; font-weight: 800; letter-spacing: -0.01em; }
+.sub { color: var(--muted); margin: 0 0 14px; max-width: 75ch; font-size: 0.93rem; }
+.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius-l); }
+.scroll { overflow-x: auto; }
+
+/* Overlap matrix: the centerpiece */
+table { border-collapse: collapse; width: 100%; }
+.matrix th, .matrix td { padding: 7px 10px; border-bottom: 1px solid var(--rule); text-align: center; white-space: nowrap; }
+.matrix thead th { font-size: 0.78rem; font-weight: 600; color: var(--muted); vertical-align: bottom; position: sticky; top: 0; background: var(--surface); }
+.matrix thead th.person { writing-mode: vertical-rl; transform: rotate(180deg); text-align: left; height: 130px; padding: 8px 6px; }
+.matrix .co { text-align: left; position: sticky; left: 0; background: var(--surface); min-width: 230px; max-width: 300px; white-space: normal; }
+.matrix tbody tr { cursor: pointer; }
+.matrix tbody tr:hover td, .matrix tbody tr:hover th { background: color-mix(in srgb, var(--buy) 6%, var(--surface)); }
+.co-btn { all: unset; cursor: pointer; display: block; }
+.co-name { font-weight: 600; }
+.ticker { color: var(--muted); font-size: 0.82rem; margin-left: 4px; }
+.count { font-weight: 800; font-size: 1.05rem; }
+.count span { background: linear-gradient(transparent 35%, var(--mark) 35%, var(--mark) 88%, transparent 88%); color: var(--mark-ink); padding: 0 4px; }
+.cell { font-size: 0.85rem; line-height: 1.25; }
+.b { color: var(--buy); font-weight: 600; }
+.s { color: var(--sell); font-weight: 600; }
+.x { color: var(--exch); font-weight: 600; }
+.ev { color: var(--event); font-weight: 600; }
+.empty-cell { color: var(--rule); }
+
+/* Month grid */
+.grid2 { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 20px; }
+@media (max-width: 860px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+.heat td, .heat th { padding: 5px 6px; font-size: 0.8rem; text-align: center; border-bottom: 1px solid var(--rule); }
+.heat th.p { text-align: left; white-space: nowrap; font-weight: 500; }
+.heat td { min-width: 34px; border-radius: 3px; }
+.filings { list-style: none; margin: 0; padding: 4px 16px; }
+.filings li { padding: 10px 0; border-bottom: 1px solid var(--rule); font-size: 0.9rem; }
+.filings li:last-child { border-bottom: 0; }
+.filings .when { color: var(--muted); font-size: 0.82rem; }
+
+/* Transactions table */
+.tx th, .tx td { padding: 7px 10px; border-bottom: 1px solid var(--rule); text-align: left; font-size: 0.88rem; vertical-align: top; }
+.tx th { color: var(--muted); font-weight: 600; font-size: 0.8rem; }
+.tx td.amt { white-space: nowrap; }
+.flag { display: inline-block; font-size: 0.75rem; color: var(--sell); border: 1px solid currentColor; border-radius: 99px; padding: 0 7px; margin-left: 4px; cursor: help; }
+.pager { display: flex; gap: 10px; align-items: center; padding: 10px 12px; font-size: 0.88rem; color: var(--muted); }
+button.btn { font: inherit; font-size: 0.88rem; color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius-s); padding: 4px 12px; cursor: pointer; }
+button.btn:disabled { opacity: 0.4; cursor: default; }
+
+.note { color: var(--muted); font-size: 0.85rem; max-width: 80ch; }
+.message { padding: 28px 20px; color: var(--muted); }
+
+/* Company drawer */
+dialog.drawer { margin: 0 0 0 auto; height: 100%; max-height: 100%; width: min(760px, 100%); border: 0; border-left: 1px solid var(--rule); padding: 0; background: var(--surface); color: var(--ink); }
+dialog.drawer::backdrop { background: rgba(10, 15, 22, 0.45); }
+.drawer-head { display: flex; justify-content: space-between; align-items: start; gap: 12px; padding: 22px 24px 8px; position: sticky; top: 0; background: var(--surface); }
+.drawer-head h3 { margin: 0; font-size: 1.6rem; font-weight: 800; letter-spacing: -0.01em; }
+.drawer-body { padding: 0 24px 32px; }
+.timeline svg { width: 100%; height: auto; display: block; }
+.timeline text { fill: var(--muted); font-size: 11px; font-family: inherit; }
+.legend { display: flex; gap: 16px; font-size: 0.82rem; color: var(--muted); margin: 6px 0 18px; flex-wrap: wrap; }
+h4 { margin: 22px 0 6px; font-size: 1rem; }
+.evlist { list-style: none; padding: 0; margin: 0; }
+.evlist li { padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 0.9rem; }
+.cat { font-size: 0.75rem; color: var(--event); border: 1px solid currentColor; border-radius: 99px; padding: 0 7px; margin-right: 6px; }
+
+footer { padding: 30px 0 60px; border-top: 1px solid var(--rule); margin-top: 40px; }
+@media (prefers-reduced-motion: no-preference) { dialog.drawer[open] { animation: slide 0.18s ease-out; } }
+@keyframes slide { from { transform: translateX(30px); opacity: 0.6; } }
+</style>
+</head>
+<body>
+
+<header class="top wrap">
+  <h1>Who’s trading the same companies</h1>
+  <p class="lede" id="lede">Loading disclosure data…</p>
+</header>
+
+<div class="filters" role="region" aria-label="Filters">
+  <div class="wrap">
+    <label>Traded from <input type="date" id="f-from"></label>
+    <label>to <input type="date" id="f-to"></label>
+    <label>Direction
+      <select id="f-type"><option value="">Buys and sells</option><option value="buy">Buys only</option><option value="sell">Sells only</option></select>
+    </label>
+    <label>Assets
+      <select id="f-class"><option value="equity">Stocks and options</option><option value="">Everything</option><option value="bond">Bonds only</option><option value="fund">Funds only</option></select>
+    </label>
+    <label>Search <input type="search" id="f-q" placeholder="Company or ticker"></label>
+    <label class="check"><input type="checkbox" id="f-pres" checked> Include the President</label>
+    <label class="check"><input type="checkbox" id="f-clean"> Hide rows that need review</label>
+  </div>
+</div>
+
+<main class="wrap">
+  <section aria-labelledby="h-overlap">
+    <h2 id="h-overlap">Companies traded by more than one official</h2>
+    <p class="sub">Each cell counts that official’s purchases (▲) and sales (▼) in the selected period. Select a company to see its timeline alongside any federal actions involving it.</p>
+    <div class="panel scroll" id="matrix"></div>
+  </section>
+
+  <section class="grid2">
+    <div>
+      <h2>Trades by month</h2>
+      <p class="sub">Number of transactions in each month, by trade date.</p>
+      <div class="panel scroll" id="heat"></div>
+    </div>
+    <div>
+      <h2>Latest reports</h2>
+      <p class="sub">Most recently posted by OGE.</p>
+      <div class="panel"><ul class="filings" id="filings"></ul></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-all">
+    <h2 id="h-all">All transactions</h2>
+    <p class="sub" id="tx-count"></p>
+    <div class="panel">
+      <div class="scroll" id="tx"></div>
+      <div class="pager"><button class="btn" id="prev">Previous</button><span id="page-info"></span><button class="btn" id="next">Next</button></div>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <p class="note">Source: periodic transaction reports (OGE Form 278-T) posted by the U.S. Office of Government Ethics, parsed automatically. Officials report amounts as ranges, not exact figures, and report trades up to 45 days after they happen. Scanned reports are read by OCR and can contain errors; rows marked “check” deserve a look at the original filing, which every row links to. A trade appearing near a federal action is a pattern worth examining, not evidence of wrongdoing.</p>
+  <p class="note" id="generated"></p>
+</footer>
+
+<dialog class="drawer" id="drawer" aria-labelledby="d-title">
+  <div class="drawer-head">
+    <div><h3 id="d-title"></h3><div class="ticker" id="d-sub"></div></div>
+    <button class="btn" id="d-close">Close</button>
+  </div>
+  <div class="drawer-body" id="d-body"></div>
+</dialog>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const money = (n) => n >= 1e6 ? "$" + (n / 1e6).toFixed(n % 1e6 ? 1 : 0) + "M" : n >= 1e3 ? "$" + Math.round(n / 1e3) + "K" : "$" + n;
+const range = (t) => t.amount_max ? `${money(t.amount_min - 1)}–${money(t.amount_max)}` : `over ${money(t.amount_min - 1)}`;
+const fmtDate = (d) => d ? new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "unknown date";
+const shortName = (n) => { const parts = n.replace(/,? (Jr|Sr|III|II)\.?$/, "").split(" "); return parts[parts.length - 1]; };
+const normOrg = (s) => String(s || "").toUpperCase().replace(/\(.*?\)/g, " ").replace(/[^A-Z0-9 ]/g, " ")
+  .split(/\s+/).filter((w) => w && !["INC", "CORP", "CORPORATION", "CO", "COMPANY", "LTD", "PLC", "LLC", "THE", "HOLDINGS", "GROUP", "CLASS", "CL", "A", "B", "COMMON", "STOCK"].includes(w)).join(" ");
+const keyOf = (t) => t.ticker || "~" + normOrg(t.company);
+
+let DATA = null, EVENTS = [], PEOPLE = [], FILTERED = [], page = 0;
+const PAGE_SIZE = 50;
+
+async function load() {
+  try {
+    const res = await fetch("data/transactions.json", { cache: "no-cache" });
+    if (!res.ok) throw new Error(`data/transactions.json returned ${res.status}`);
+    DATA = await res.json();
+  } catch (err) {
+    $("lede").textContent = location.protocol === "file:"
+      ? "This page needs to be served over the web to load its data. Open it through GitHub Pages, or run “python -m http.server” in the docs folder and visit http://localhost:8000."
+      : `The transaction data didn’t load (${err.message}). Run parse_278t.py so docs/data/transactions.json exists.`;
+    return;
+  }
+  try {
+    const ev = await fetch("data/events.json", { cache: "no-cache" });
+    if (ev.ok) EVENTS = ((await ev.json()).events || []).filter((e) => e.date);
+  } catch { /* events are optional */ }
+  PEOPLE = DATA.people.filter((p) => DATA.transactions.some((t) => t.person === p.name));
+  $("generated").textContent = `Data updated ${new Date(DATA.generated).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}.`;
+  ["f-from", "f-to", "f-type", "f-class", "f-q", "f-pres", "f-clean"].forEach((id) => $(id).addEventListener("input", () => { page = 0; render(); }));
+  $("prev").onclick = () => { page--; renderTable(); };
+  $("next").onclick = () => { page++; renderTable(); };
+  $("d-close").onclick = () => $("drawer").close();
+  $("drawer").addEventListener("click", (e) => { if (e.target === $("drawer")) $("drawer").close(); });
+  render();
+}
+
+function applyFilters() {
+  const from = $("f-from").value, to = $("f-to").value, type = $("f-type").value, klass = $("f-class").value;
+  const q = $("f-q").value.trim().toLowerCase(), pres = $("f-pres").checked, clean = $("f-clean").checked;
+  const presidents = new Set(DATA.people.filter((p) => p.role === "President").map((p) => p.name));
+  return DATA.transactions.filter((t) =>
+    (!from || (t.date && t.date >= from)) && (!to || (t.date && t.date <= to)) &&
+    (!type || t.type === type) &&
+    (!klass || (klass === "equity" ? (t.class === "stock" || t.class === "option") : t.class === klass)) &&
+    (pres || !presidents.has(t.person)) && (!clean || !t.review.length) &&
+    (!q || t.company.toLowerCase().includes(q) || t.asset.toLowerCase().includes(q) || t.ticker.toLowerCase() === q));
+}
+
+function eventsFor(key, company) {
+  const org = normOrg(company);
+  return EVENTS.filter((e) => (e.ticker && e.ticker.toUpperCase() === key) || (e.org && normOrg(e.org) === org));
+}
+
+function render() {
+  FILTERED = applyFilters();
+  const people = new Set(FILTERED.map((t) => t.person));
+  const companies = new Set(FILTERED.filter((t) => t.class !== "bond").map(keyOf));
+  const reports = DATA.filings.filter((f) => f.rows > 0).length;
+  $("lede").innerHTML = `<strong>${FILTERED.length.toLocaleString()} transactions</strong> by <strong>${people.size} officials</strong> across ${companies.size.toLocaleString()} companies and funds, from ${reports} transaction reports. Officials disclose trades weeks after making them, so the most recent activity always lags.`;
+  renderMatrix(); renderHeat(); renderFilings(); renderTable();
+}
+
+function groupByCompany(rows) {
+  const groups = new Map();
+  for (const t of rows) {
+    const k = keyOf(t);
+    if (!groups.has(k)) groups.set(k, { key: k, ticker: t.ticker, company: t.company, rows: [], people: new Map() });
+    const g = groups.get(k);
+    g.rows.push(t);
+    const c = g.people.get(t.person) || { buy: 0, sell: 0, exchange: 0, unknown: 0 };
+    c[t.type] = (c[t.type] || 0) + 1;
+    g.people.set(t.person, c);
+  }
+  return [...groups.values()];
+}
+
+function renderMatrix() {
+  const shared = groupByCompany(FILTERED.filter((t) => t.class !== "bond"))
+    .filter((g) => g.people.size >= 2)
+    .sort((a, b) => b.people.size - a.people.size || b.rows.length - a.rows.length);
+  if (!shared.length) {
+    $("matrix").innerHTML = `<p class="message">No company was traded by two or more of the selected officials in this period. Widen the date range, include the President, or switch assets to “Everything”.</p>`;
+    return;
+  }
+  const cols = PEOPLE.filter((p) => shared.some((g) => g.people.has(p.name)));
+  const top = shared.slice(0, 80);
+  const head = `<thead><tr><th class="co">Company</th><th>Officials</th>${cols.map((p) => `<th class="person" title="${esc(p.role)}">${esc(p.name)}</th>`).join("")}${EVENTS.length ? "<th>Federal actions</th>" : ""}</tr></thead>`;
+  const body = top.map((g, i) => {
+    const cells = cols.map((p) => {
+      const c = g.people.get(p.name);
+      if (!c) return `<td class="empty-cell" aria-label="no trades">·</td>`;
+      const parts = [];
+      if (c.buy) parts.push(`<span class="b">▲${c.buy}</span>`);
+      if (c.sell) parts.push(`<span class="s">▼${c.sell}</span>`);
+      if (c.exchange) parts.push(`<span class="x">⇄${c.exchange}</span>`);
+      if (c.unknown) parts.push(`<span>?${c.unknown}</span>`);
+      return `<td class="cell">${parts.join(" ")}</td>`;
+    }).join("");
+    const ev = EVENTS.length ? `<td>${eventsFor(g.key, g.company).length ? `<span class="ev">${eventsFor(g.key, g.company).length}</span>` : `<span class="empty-cell">·</span>`}</td>` : "";
+    return `<tr data-i="${i}"><th class="co" scope="row"><button class="co-btn" data-i="${i}"><span class="co-name">${esc(g.company)}</span>${g.ticker ? `<span class="ticker">${esc(g.ticker)}</span>` : ""}</button></th><td class="count"><span>${g.people.size}</span></td>${cells}${ev}</tr>`;
+  }).join("");
+  const more = shared.length > top.length ? `<p class="message">Showing the top ${top.length} of ${shared.length}. Use the search box to find others.</p>` : "";
+  $("matrix").innerHTML = `<table class="matrix">${head}<tbody>${body}</tbody></table>${more}`;
+  $("matrix").querySelectorAll("tbody tr").forEach((tr) => tr.addEventListener("click", () => openCompany(top[+tr.dataset.i])));
+}
+
+function renderHeat() {
+  const dated = FILTERED.filter((t) => t.date);
+  if (!dated.length) { $("heat").innerHTML = `<p class="message">No dated transactions match these filters.</p>`; return; }
+  const months = [...new Set(dated.map((t) => t.date.slice(0, 7)))].sort();
+  const counts = new Map();
+  dated.forEach((t) => { const k = t.person + "|" + t.date.slice(0, 7); counts.set(k, (counts.get(k) || 0) + 1); });
+  const max = Math.max(...counts.values());
+  const people = PEOPLE.filter((p) => dated.some((t) => t.person === p.name));
+  const label = (m) => new Date(m + "-15").toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+  const rows = people.map((p) => `<tr><th class="p" scope="row">${esc(p.name)}</th>${months.map((m) => {
+    const n = counts.get(p.name + "|" + m) || 0;
+    const a = n ? 0.12 + 0.88 * Math.log(1 + n) / Math.log(1 + max) : 0;
+    return `<td style="background: rgba(var(--heat), ${a.toFixed(2)}); color: ${a > 0.55 ? "#fff" : "inherit"}" title="${n} in ${label(m)}">${n || ""}</td>`;
+  }).join("")}</tr>`).join("");
+  $("heat").innerHTML = `<table class="heat"><thead><tr><th></th>${months.map((m) => `<th>${label(m)}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderFilings() {
+  const list = [...DATA.filings].filter((f) => f.is_278t).sort((a, b) => b.posted.localeCompare(a.posted)).slice(0, 8);
+  $("filings").innerHTML = list.map((f) => `<li><strong>${esc(f.person)}</strong>, ${f.rows ? `${f.rows} transactions` : esc(f.status)}<br><span class="when">Posted ${fmtDate(f.posted)}${f.url ? ` · <a href="${esc(f.url)}" target="_blank" rel="noopener">${f.needs_request ? "request from OGE" : "original PDF"}</a>` : ""}</span></li>`).join("") || `<li>No transaction reports yet.</li>`;
+}
+
+function txRows(rows, showPerson = true) {
+  const filings = new Map(DATA.filings.map((f) => [f.id, f]));
+  return rows.map((t) => {
+    const f = filings.get(t.filing);
+    const cls = t.type === "buy" ? "b" : t.type === "sell" ? "s" : "x";
+    const flag = t.review.length ? `<span class="flag" title="${esc(t.review.join("; "))}">check</span>` : "";
+    return `<tr><td>${fmtDate(t.date)}</td>${showPerson ? `<td>${esc(t.person)}</td>` : ""}<td class="${cls}">${t.type === "buy" ? "Buy" : t.type === "sell" ? "Sell" : t.type === "exchange" ? "Exchange" : "Unclear"}</td><td>${esc(t.company)}${t.ticker ? `<span class="ticker">${esc(t.ticker)}</span>` : ""}${t.company !== t.asset ? `<div class="ticker">${esc(t.asset)}</div>` : ""}</td><td class="amt">${range(t)}</td><td>${f && f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener">p. ${t.page}</a>` : ""}${flag}</td></tr>`;
+  }).join("");
+}
+
+function renderTable() {
+  const rows = [...FILTERED].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  page = Math.min(Math.max(page, 0), pages - 1);
+  $("tx-count").textContent = `${rows.length.toLocaleString()} matching the filters, newest trades first.`;
+  $("tx").innerHTML = rows.length
+    ? `<table class="tx"><thead><tr><th>Traded</th><th>Official</th><th>Direction</th><th>Asset</th><th>Amount</th><th>Source</th></tr></thead><tbody>${txRows(rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE))}</tbody></table>`
+    : `<p class="message">Nothing matches these filters.</p>`;
+  $("page-info").textContent = `Page ${page + 1} of ${pages}`;
+  $("prev").disabled = page === 0; $("next").disabled = page >= pages - 1;
+}
+
+function openCompany(g) {
+  const events = eventsFor(g.key, g.company).sort((a, b) => a.date.localeCompare(b.date));
+  const rows = g.rows.filter((t) => t.date).sort((a, b) => a.date.localeCompare(b.date));
+  $("d-title").textContent = g.company;
+  $("d-sub").textContent = `${g.ticker ? g.ticker + ", " : ""}${g.rows.length} transactions by ${g.people.size} officials`;
+  const dates = [...rows.map((t) => t.date), ...events.map((e) => e.date)].sort();
+  let svg = "";
+  if (dates.length) {
+    const t0 = new Date(dates[0]).getTime() - 7 * 864e5, t1 = new Date(dates[dates.length - 1]).getTime() + 7 * 864e5;
+    const lanes = [...(events.length ? ["Federal actions"] : []), ...[...g.people.keys()]];
+    const W = 700, L = 130, R = 16, laneH = 30, H = lanes.length * laneH + 30;
+    const x = (d) => L + (new Date(d).getTime() - t0) / (t1 - t0) * (W - L - R);
+    const y = (lane) => lanes.indexOf(lane) * laneH + 18;
+    let marks = "";
+    lanes.forEach((lane) => { marks += `<line x1="${L}" x2="${W - R}" y1="${y(lane)}" y2="${y(lane)}" stroke="var(--rule)"/><text x="0" y="${y(lane) + 4}">${esc(lane.length > 20 ? lane.slice(0, 19) + "…" : lane)}</text>`; });
+    events.forEach((e) => { marks += `<line x1="${x(e.date)}" x2="${x(e.date)}" y1="8" y2="${H - 22}" stroke="var(--event)" stroke-dasharray="2 3" opacity="0.6"/><rect x="${x(e.date) - 5}" y="${y("Federal actions") - 5}" width="10" height="10" fill="var(--event)"><title>${esc(e.date + ": " + e.title)}</title></rect>`; });
+    rows.forEach((t) => {
+      const cx = x(t.date), cy = y(t.person), color = t.type === "buy" ? "var(--buy)" : t.type === "sell" ? "var(--sell)" : "var(--exch)";
+      const pts = t.type === "sell" ? `${cx - 6},${cy - 4} ${cx + 6},${cy - 4} ${cx},${cy + 6}` : `${cx - 6},${cy + 4} ${cx + 6},${cy + 4} ${cx},${cy - 6}`;
+      marks += `<polygon points="${pts}" fill="${color}" opacity="0.85"><title>${esc(`${t.date}: ${t.type} ${range(t)}`)}</title></polygon>`;
+    });
+    const fmtAxis = (ms) => new Date(ms).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    marks += `<text x="${L}" y="${H - 4}">${fmtAxis(t0)}</text><text x="${W - R}" y="${H - 4}" text-anchor="end">${fmtAxis(t1)}</text>`;
+    svg = `<div class="timeline"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Timeline of trades${events.length ? " and federal actions" : ""}">${marks}</svg></div>
+      <div class="legend"><span class="b">▲ buy</span><span class="s">▼ sell</span>${events.length ? `<span class="ev">■ federal action</span>` : ""}</div>`;
+  }
+  const evHtml = events.length
+    ? `<h4>Federal actions</h4><ul class="evlist">${events.map((e) => `<li><span class="cat">${esc(e.category || "action")}</span>${fmtDate(e.date)}: ${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.title)}</a>` : esc(e.title)}${e.source ? ` <span class="ticker">${esc(e.source)}</span>` : ""}</li>`).join("")}</ul>`
+    : `<h4>Federal actions</h4><p class="note">None recorded yet. Contracts, investigations and regulatory actions added to data/events.json will appear here and on the timeline above.</p>`;
+  $("d-body").innerHTML = `${svg}<h4>Transactions</h4><div class="scroll"><table class="tx"><thead><tr><th>Traded</th><th>Official</th><th>Direction</th><th>Asset</th><th>Amount</th><th>Source</th></tr></thead><tbody>${txRows([...g.rows].sort((a, b) => (b.date || "").localeCompare(a.date || "")))}</tbody></table></div>${evHtml}`;
+  $("drawer").showModal();
+}
+
+load();
+</script>
+</body>
+</html>
