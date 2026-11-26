@@ -3,7 +3,7 @@ count,description
 9,0 REILLY AUTOMOTIVE INC
 8,GLOBAL PMTS INC
 7,FedFund Institutional Shares (TFDXX)
-6,"Arthur Ventures V, LP See Endnote"
+7,"Arthur Ventures V, LP See Endnote"
 5,INTERNTNL PAPER CO
 5,QORVOINC
 5,0-1 GLASS INC
@@ -15,6 +15,7 @@ count,description
 3,Roxo Energy Funding IV LLC
 3,Castle Hook LP
 3,IAC INC
+3,"Arthur Ventures Growth IV, LP See Endnote"
 3,GE AEROSPACE UNSOLICITED
 3,INDIVIOR PHARMACEUTICALS
 3,ABMINDSINC
@@ -43,7 +44,6 @@ count,description
 2,"Arthur Ventures Growth I, LP - Protenus See Endnote"
 2,Key Square Partners II LP
 2,Key Square Partners II LLP
-2,"Arthur Ventures Growth IV, LP See Endnote"
 2,"Arthur Ventures Growth IV, LP - CertifID, Inc. See Endnote"
 2,FIRST HORIZON BK MEMPHIS TENN
 2,***VICTORIAS SECRET CO REG S
@@ -127,6 +127,7 @@ count,description
 2,GULFPORT ENERGY CORP EQU CLASS EQUITY I
 2,ACCENTIJRE PLC
 2,OENACORP
+2,"Office Puzzle Holdings, Inc."
 1,"EMX Royalty Corporation Common Shares (Canada) (EMX) $250,000"
 1,"EMX Royalty Corporation Common Shares (Canada) (EMX) $500,000"
 1,"Inspirato Inc, 5000 shares"
@@ -1596,3 +1597,28 @@ count,description
 1,SDUTI-iWEST AIRLINES CO
 1,VISTRACORP 714 NEXTERA ENERGY INC sale 911/2026 Yos $15 001 • $50 000
 1,n3 TEXTRON INC
+1,"Arthur Ventures V - Pearly Holdings, Inc (dental See Endnote collection software) $250,000"
+1,"Arthur Venture V, LP - Pearly Holdings, Inc (dental See Endnote collection software)"
+1,"Hudu Technologies, Inc."
+1,Northteq
+1,"Payroll Integration Holdings, Inc (employee benefits recordkeeper) $250,000"
+1,"Praxis Campus Management Software, Inc. (comprehensive campus management software for higher education institutions)"
+1,"RFX Solutions, Inc (software)"
+1,Senior Sign (software)
+1,Sliced Health Inc (revenue software)
+1,"Steppingblock, Inc (data and analytics software)"
+1,"zizzi holding company, inc. (ICHRA administration)"
+1,Zum Rails Inc (payment software)
+1,Civic Plus Holdings
+1,"Circadian Risk, Inc."
+1,"Opterrix Group, Inc."
+1,"Pearly Holdings, Inc."
+1,"Aqua Platform, Inc."
+1,"Virtual Benefits Administrator (cloud based software) $250,000"
+1,"CertifID, Inc. (wire fraud security solution)"
+1,"Documo Inc. (fax and document management software) $100,000"
+1,"Nucleus Security, Inc. (risk management software)"
+1,"Perry Weather, Inc. (weather safety management software) $250,000"
+1,"PSG Recast Holdings, LP (productivity suite for configuration manager) $250,000"
+1,"ThreatLocker, Inc (application and storage whitelisting software) $500,000"
+1,"Foundant Parent Holdings, LP (non-profit grant management software) $250,000"
